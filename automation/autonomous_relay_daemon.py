@@ -38,10 +38,20 @@ ACCOUNT_3_TOKEN = load_token(3, ACCOUNT_3_USER)
 
 def step1_harvest_internet_data():
     print(f"\n{'='*70}")
-    print("[PHASE 1] Autonomous Internet Harvesting: Crawling Newest Exploits & CVEs...")
+    print("[PHASE 1] Multi-Source Threat Intel & Patch-Diffing Harvester...")
     print(f"{'='*70}")
-    script_path = os.path.join(REPO_DIR, "data_pipeline", "autonomous_internet_harvester.py")
-    subprocess.run([sys.executable, script_path], check=True)
+    
+    # 1. Multi-source elite intelligence (Project Zero, Kaspersky, GitHub Advisories)
+    intel_script = os.path.join(REPO_DIR, "data_pipeline", "multi_source_threat_intel_harvester.py")
+    subprocess.run([sys.executable, intel_script], check=False)
+
+    # 2. Patch-Diffing & Root-Cause analysis engine
+    patch_script = os.path.join(REPO_DIR, "data_pipeline", "fetch_patch_diffs.py")
+    subprocess.run([sys.executable, patch_script], check=False)
+
+    # 3. CVE PoCs with Deduplication registry
+    cve_script = os.path.join(REPO_DIR, "data_pipeline", "autonomous_internet_harvester.py")
+    subprocess.run([sys.executable, cve_script], check=False)
 
 def step2_sandbox_verification_loop():
     print(f"\n{'='*70}")
