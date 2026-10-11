@@ -84,10 +84,14 @@ def trigger_kaggle_kernel(username, token):
         f.write(token)
     os.chmod(os.path.join(kaggle_dir, "access_token"), 0o600)
 
-    # Update metadata ID
+    # Update metadata ID and link previous node weights as input source
     with open(META_PATH, "r") as f:
         meta = json.load(f)
     meta["id"] = f"{username}/bugbounty-copilot-trainer"
+    if username == "mmossad2124":
+        meta["kernel_sources"] = ["mmossad2324/bugbounty-copilot-trainer"]
+    elif username == "mmossad2324":
+        meta["kernel_sources"] = ["mmossad2124/bugbounty-copilot-trainer"]
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
 

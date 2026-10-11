@@ -6,3 +6,5 @@ accounts/*.json
 __pycache__/
 .ipynb_checkpoints/
 *.log
+models/
+models/*
