@@ -13,7 +13,7 @@ jobs:
       - name: Checkout BugBounty-Copilot Repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_PAT }}
 
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -23,7 +23,7 @@ jobs:
       - name: Install Dependencies & Kaggle Client
         run: |
           pip install --upgrade pip
-          pip install kaggle urllib3 requests
+          pip install kaggle urllib3 requests pynacl
 
       - name: Configure Git Identity for Autonomous Commits
         run: |
@@ -34,6 +34,9 @@ jobs:
         env:
           KAGGLE_API_TOKEN_1: ${{ secrets.KAGGLE_API_TOKEN_1 }}
           KAGGLE_API_TOKEN_3: ${{ secrets.KAGGLE_API_TOKEN_3 }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          GH_PAT: ${{ secrets.GH_PAT }}
         run: |
           # Executes the harvester, pushes fresh 0-days, sequences Account 1 and Account 3 on Kaggle
           python automation/autonomous_relay_daemon.py
