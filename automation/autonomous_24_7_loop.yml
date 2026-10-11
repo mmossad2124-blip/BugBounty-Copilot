@@ -1,0 +1,39 @@
+name: 24/7 Autonomous Bug Bounty Self-Evolution Loop
+
+on:
+  schedule:
+    # Runs automatically every day at 02:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual one-click trigger anytime from GitHub Actions tab
+
+jobs:
+  autonomous_self_learning_cycle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout BugBounty-Copilot Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies & Kaggle Client
+        run: |
+          pip install --upgrade pip
+          pip install kaggle urllib3 requests
+
+      - name: Configure Git Identity for Autonomous Commits
+        run: |
+          git config --global user.name "Autonomous-Cyber-AI"
+          git config --global user.email "bot@users.noreply.github.com"
+
+      - name: Execute Full Autonomous Relay Daemon
+        env:
+          KAGGLE_API_TOKEN_1: ${{ secrets.KAGGLE_API_TOKEN_1 }}
+          KAGGLE_API_TOKEN_3: ${{ secrets.KAGGLE_API_TOKEN_3 }}
+        run: |
+          # Executes the harvester, pushes fresh 0-days, sequences Account 1 and Account 3 on Kaggle
+          python automation/autonomous_relay_daemon.py
