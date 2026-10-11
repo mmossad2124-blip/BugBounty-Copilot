@@ -168,6 +168,13 @@ def run_full_autonomous_relay():
     trigger_kaggle_kernel(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
     wait_for_kernel_completion(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
 
+    # 6. Phase C: Post-Training Complex Sandbox Exam (Multi-Round Trial-and-Error)
+    print(f"\n{'='*70}")
+    print("[PHASE 6] Post-Training Autonomous Sandbox Exam: Multi-Round Trial-and-Error & Patching...")
+    print(f"{'='*70}")
+    complex_sandbox = os.path.join(REPO_DIR, "sandbox", "complex_multiround_sandbox.py")
+    subprocess.run([sys.executable, complex_sandbox], check=False)
+
     print(f"\n{'#'*75}")
     print("# [✓] ALL RELAY PHASES COMPLETED! MODEL BRAIN FULLY UPDATED FOR THE DAY.")
     print(f"{'#'*75}\n")
