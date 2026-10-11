@@ -1,0 +1,118 @@
+{
+  "categories": [
+    {
+      "name": "Root Causes & 0-Day Vulnerability Research",
+      "description": "Deep memory corruption, kernel state bugs, and root-cause whitepapers",
+      "sources": [
+        {
+          "name": "Google Project Zero",
+          "type": "rss_json",
+          "url": "https://googleprojectzero.blogspot.com/feeds/posts/default?alt=json",
+          "focus": "Browser & Kernel Memory Corruption (UAF, Heap Overflow, KASLR defeat)"
+        },
+        {
+          "name": "GitHub Security Advisories & Huntr",
+          "type": "api",
+          "url": "https://api.github.com/advisories?per_page=20",
+          "focus": "0-Day & Critical Advisories across Open Source, AI Frameworks, and Web Systems"
+        },
+        {
+          "name": "Linux Kernel Bug Tracker (KernelBugzilla / LKML)",
+          "type": "web",
+          "url": "https://bugzilla.kernel.org/",
+          "focus": "Pre-patch Linux Kernel flaws, race conditions, and privilege boundary regressions"
+        },
+        {
+          "name": "AttackerKB",
+          "type": "web",
+          "url": "https://attackerkb.com/",
+          "focus": "Expert technical teardowns and reverse engineering of exploitable conditions"
+        },
+        {
+          "name": "OffensiveCon Papers Archive",
+          "type": "whitepapers",
+          "url": "https://www.offensivecon.org/",
+          "focus": "Advanced Exploit Development, modern CPU/OS mitigation bypasses (ASLR, CFG, DEP)"
+        }
+      ]
+    },
+    {
+      "name": "Advanced Red Teaming & OS Internals (Evasion & LotL)",
+      "description": "Behavioral evasion, living-off-the-land, and undocumented kernel mechanisms",
+      "sources": [
+        {
+          "name": "SpecterOps Insights",
+          "type": "rss",
+          "url": "https://posts.specterops.io/feed",
+          "focus": "Living off the Land (LotL), Active Directory Tradecraft, BloodHound mechanics"
+        },
+        {
+          "name": "Kaspersky Securelist (GReAT)",
+          "type": "rss",
+          "url": "https://securelist.com/feed/",
+          "focus": "Advanced Threat Intelligence, Banking Trojan teardowns, APT exploit chains"
+        },
+        {
+          "name": "Phrack Magazine",
+          "type": "archive",
+          "url": "http://phrack.org/",
+          "focus": "Legendary C & Assembly low-level kernel & memory manipulation research"
+        },
+        {
+          "name": "Atomic Red Team (MITRE ATT&CK Mappings)",
+          "type": "git",
+          "url": "https://api.github.com/repos/redcanaryco/atomic-red-team",
+          "focus": "Comprehensive execution blueprints mapped to ATT&CK tactics & EDR triggers"
+        },
+        {
+          "name": "Native API & Syscalls Research (SysWhispers / Hell's Gate)",
+          "type": "git",
+          "url": "https://github.com/klezVirus/SysWhispers3",
+          "focus": "Indirect Syscalls, Call Stack Spoofing, and API Unhooking mechanics"
+        }
+      ]
+    },
+    {
+      "name": "AI & LLM Security (MITRE ATLAS & Huntr)",
+      "description": "Adversarial machine learning, prompt injection, and model inversion",
+      "sources": [
+        {
+          "name": "MITRE ATLAS Matrix",
+          "type": "git_yaml",
+          "url": "https://raw.githubusercontent.com/mitre-atlas/atlas-data/main/dist/ATLAS.yaml",
+          "focus": "Adversarial Threat Landscape for AI Systems (Data poisoning, RAG injection)"
+        },
+        {
+          "name": "Huntr AI Bug Bounty Disclosures",
+          "type": "advisories",
+          "url": "https://huntr.com/",
+          "focus": "Vulnerabilities in AI models, LangChain, vector DBs, and LLM agent gateways"
+        },
+        {
+          "name": "Robust Intelligence Research",
+          "type": "web",
+          "url": "https://www.robustintelligence.com/blog",
+          "focus": "AI Model Guardrail stress-testing and prompt injection boundary analysis"
+        }
+      ]
+    },
+    {
+      "name": "Financial Threat Intelligence & Trading Protocols",
+      "description": "FIX protocol, high-frequency trading (HFT) attacks, and banking malware",
+      "sources": [
+        {
+          "name": "Group-IB Research Hub & Financial Threat Intel",
+          "type": "intel",
+          "url": "https://www.group-ib.com/resources/research-hub/",
+          "focus": "Financial fraud architectures, Banking Trojans (Zeus/Carberp lineage), FIX engine abuse"
+        },
+        {
+          "name": "FIX Protocol Security & Trading Engine Auditing",
+          "type": "protocol_spec",
+          "url": "https://www.fixtrading.org/",
+          "focus": "Tag 35/44/38 order book integrity, WebSocket trading session hijacking, API secret dumping"
+        }
+      ]
+    }
+  ]
+}

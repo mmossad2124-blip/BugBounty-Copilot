@@ -1,0 +1,15 @@
+[
+  "[Advisory] GHSA-fmmf-xq98-g327 - Vikunja: Write-level project members can delete admin-tier link shares through a",
+  "[Advisory] GHSA-fprf-r6rv-xg99 - Vikunja: Saved filter creation with an empty filter string recalculates task pos",
+  "[Advisory] GHSA-hjx8-qv73-f7cm - Vikunja: Webhooks and link shares survive every revocation path, so a removed co",
+  "[Advisory] GHSA-m687-p538-r5hp - Vikunja: Permissive Cross-domain Security Policy trusts every localhost origin w",
+  "[Advisory] GHSA-pjr3-86v4-5p7w - Vikunja: Explicit lower-permission share on a sub-project is silently overridden",
+  "[Kaspersky Securelist] Group Policy hijacked: PAYLOAD ransomware weaponizes Active Directory GPO",
+  "[Kaspersky Securelist] MacSync under the microscope: new delivery methods and a new payload",
+  "[Kaspersky Securelist] NightEagle targets Russian companies",
+  "[Kaspersky Securelist] The Odyssey and Trojans again: MovieReaper attacks users in multiple countries through compromised torrents",
+  "[Project Zero] A look at an Android ITW DNG exploit",
+  "[Project Zero] Defeating KASLR by Doing Nothing at All",
+  "[Project Zero] From Chrome renderer code exec to kernel with MSG_OOB",
+  "[Project Zero] Pointer leaks through pointer-keyed data structures"
+]
