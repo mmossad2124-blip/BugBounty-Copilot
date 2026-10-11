@@ -1,0 +1,7 @@
+# Protect sensitive credential files
+.env
+accounts/*.json
+!accounts/account_template.json
+*.pyc
+__pycache__/
+.ipynb_checkpoints/

@@ -1,0 +1,42 @@
+name: Daily Autonomous Bug Bounty Training Loop
+
+on:
+  schedule:
+    # Runs automatically every day at 02:00 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allows manual one-click trigger anytime
+
+jobs:
+  autonomous_training_trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Kaggle API & Dependencies
+        run: |
+          pip install kaggle
+
+      - name: Fetch Fresh High-Signal Writeups & Disclosures
+        run: |
+          python data_pipeline/fetch_elite_writeups.py
+
+      - name: Configure Kaggle API Credentials
+        env:
+          KAGGLE_API_TOKEN_1: ${{ secrets.KAGGLE_API_TOKEN_1 }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "$KAGGLE_API_TOKEN_1" > ~/.kaggle/access_token
+          chmod 600 ~/.kaggle/access_token
+
+      - name: Push and Trigger Kaggle Background Kernel (T4 GPU)
+        run: |
+          echo "[*] Triggering Kaggle Background Training..."
+          # Pushes the training kernel to Kaggle to run unattended on free T4 GPU
+          kaggle kernels push -p notebooks/
+          echo "[✓] Kernel pushed! Kaggle is now training autonomously in the background."
