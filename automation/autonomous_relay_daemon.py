@@ -66,6 +66,14 @@ def trigger_kaggle_kernel(username, token):
     """Pushes and starts a Kaggle kernel using python with SSL patch."""
     print(f"[*] Triggering Kaggle GPU Runner for node: {username}...")
     
+    # Write token file for Kaggle CLI / API
+    home = os.path.expanduser("~")
+    kaggle_dir = os.path.join(home, ".kaggle")
+    os.makedirs(kaggle_dir, exist_ok=True)
+    with open(os.path.join(kaggle_dir, "access_token"), "w") as f:
+        f.write(token)
+    os.chmod(os.path.join(kaggle_dir, "access_token"), 0o600)
+
     # Update metadata ID
     with open(META_PATH, "r") as f:
         meta = json.load(f)
@@ -92,7 +100,9 @@ print("[✓] Push Successful:", res.url if hasattr(res, "url") else res)
 
 def wait_for_kernel_completion(username, token, max_wait_hours=4):
     """Polls Kaggle API until the kernel reaches 'complete' status."""
-    print(f"[*] Waiting for {username} training session to complete in the cloud...")
+    print(f"[*] Kernel triggered for {username}. Waiting 45s for cloud node to register job queue...")
+    time.sleep(45)
+    print(f"[*] Monitoring {username} training session in the cloud...")
     start_time = time.time()
     url = f"https://www.kaggle.com/api/v1/kernels/status?userName={username}&kernelSlug=bugbounty-copilot-trainer"
     headers = {"Authorization": f"Bearer {token}", "User-Agent": "KaggleWatcher/1.0"}
