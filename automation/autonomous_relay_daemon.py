@@ -82,7 +82,7 @@ def trigger_kaggle_kernel(username, token):
         json.dump(meta, f, indent=2)
 
     pusher_code = f"""
-import os, sys, ssl, urllib3.util.ssl_
+import os, sys, ssl, time, urllib3.util.ssl_
 orig = urllib3.util.ssl_.create_urllib3_context
 def patched(*args, **kwargs):
     ctx = orig(*args, **kwargs)
@@ -93,8 +93,17 @@ os.environ["KAGGLE_API_TOKEN"] = "{token}"
 from kaggle.api.kaggle_api_extended import KaggleApi
 api = KaggleApi()
 api.authenticate()
-res = api.kernels_push("{NOTEBOOKS_DIR}")
-print("[✓] Push Successful:", res.url if hasattr(res, "url") else res)
+
+for attempt in range(1, 6):
+    try:
+        res = api.kernels_push("{NOTEBOOKS_DIR}")
+        print("[✓] Push Successful:", res.url if hasattr(res, "url") else res)
+        break
+    except Exception as e:
+        print(f"[!] Push attempt {{attempt}} failed: {{e}}. Retrying in 10s...")
+        time.sleep(10)
+        if attempt == 5:
+            raise
 """
     subprocess.run([sys.executable, "-c", pusher_code], check=True)
 
