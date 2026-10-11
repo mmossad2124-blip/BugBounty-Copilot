@@ -1,44 +1,43 @@
 #!/usr/bin/env python3
 """
-Multi-Account Kaggle Cluster Orchestrator (90 Hours / Week)
-Rotates across Account 1, Account 2, and Account 3 to balance GPU quotas
-and execute specialized training stages (SFT, DPO, ALAS Self-Evolution).
+Multi-Account Kaggle Cluster Orchestrator (Dual-Node: Account 1 & Account 3)
+Permanently configured to route between Account 1 (mmossad2124) and Account 3 (mmossad2324)
+handling SFT, DPO Alignment, and Autonomous Self-Evolution.
 """
 
 import os
 import subprocess
 import json
 
-ACCOUNTS = [
-    {
-        "id": 1,
-        "username": "mmossad2124",
-        "token": "KGAT_8674338cd01a502688c872dcfb449c9c",
-        "stage": "STAGE_1_DEEP_SFT",
-        "role": "Deep Knowledge Acquisition & Multi-Vector Exploitation"
-    },
-    {
-        "id": 2,
-        "username": "mmossad2224",
-        "token": "KGAT_4742ca67eb0db8c50680e2b722869334",
-        "stage": "STAGE_2_DPO_ALIGNMENT",
-        "role": "Deep Thinking & Exploit Chaining Contrastive Optimization"
-    },
-    {
-        "id": 3,
-        "username": "mmossad2324",
-        "token": "KGAT_48bbd3cfad1e206ad99d7b5eb66f22e8",
-        "stage": "STAGE_3_ALAS_SELF_EVOLUTION",
-        "role": "Autonomous Synthetic Data Generation & Gap-Patching Loop"
+def load_account_config(acc_id, username, fallback_token, stage, role):
+    creds_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "accounts", f"account_{acc_id}_{username}.json")
+    token = fallback_token
+    if os.path.exists(creds_path):
+        try:
+            with open(creds_path) as f:
+                data = json.load(f)
+                token = data.get("credentials", {}).get("kaggle_api_token", fallback_token)
+        except Exception:
+            pass
+    return {
+        "id": acc_id,
+        "username": username,
+        "token": token,
+        "stage": stage,
+        "role": role
     }
+
+ACCOUNTS = [
+    load_account_config(1, "mmossad2124", os.environ.get("KAGGLE_TOKEN_1", ""), "STAGE_1_WEB_CLOUD_DPO", "Initial Foothold, Web/API Exploitation & DPO Reasoning Track 1"),
+    load_account_config(3, "mmossad2324", os.environ.get("KAGGLE_TOKEN_3", ""), "STAGE_2_PRIVESC_KERNEL_DPO", "Kernel PrivEsc, Active Directory Dominance & DPO Reasoning Track 2")
 ]
 
 def run_stage(account):
-    print(f"\n{'='*60}")
-    print(f"[*] Activating Kaggle Cluster Node: {account['username']} (Account {account['id']})")
+    print(f"\n{'='*65}")
+    print(f"[*] Activating Dedicated Cluster Node: {account['username']} (Account {account['id']})")
     print(f"[*] Assigned Stage: {account['stage']}")
-    print(f"[*] Role: {account['role']}")
-    print(f"{'='*60}")
+    print(f"[*] Specialization: {account['role']}")
+    print(f"{'='*65}")
 
     env = os.environ.copy()
     env["KAGGLE_API_TOKEN"] = account["token"]
@@ -51,7 +50,6 @@ def run_stage(account):
         f.write(account["token"])
     os.chmod(os.path.join(kaggle_dir, "access_token"), 0o600)
 
-    # Update kernel-metadata.json
     notebooks_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "notebooks")
     metadata_path = os.path.join(notebooks_dir, "kernel-metadata.json")
     
@@ -62,21 +60,31 @@ def run_stage(account):
     with open(metadata_path, "w") as f:
         json.dump(meta, f, indent=2)
 
-    # Push and start training
-    cmd = ["kaggle", "kernels", "push", "-p", notebooks_dir]
-    try:
-        res = subprocess.run(cmd, env=env, capture_output=True, text=True, check=True)
-        print(f"[✓] Successfully triggered: {res.stdout.strip()}")
-    except subprocess.CalledProcessError as e:
-        print(f"[!] Warning: {e.stderr.strip() if e.stderr else e}")
+    pusher_code = f"""
+import os, sys, ssl, urllib3.util.ssl_
+orig = urllib3.util.ssl_.create_urllib3_context
+def patched(*args, **kwargs):
+    ctx = orig(*args, **kwargs)
+    ctx.set_ciphers("DEFAULT@SECLEVEL=1")
+    return ctx
+urllib3.util.ssl_.create_urllib3_context = patched
+os.environ["KAGGLE_API_TOKEN"] = "{account['token']}"
+from kaggle.api.kaggle_api_extended import KaggleApi
+api = KaggleApi()
+api.authenticate()
+res = api.kernels_push("{notebooks_dir}")
+print("[✓] Kaggle Node Triggered Successfully:", res.url if hasattr(res, "url") else res)
+"""
+    subprocess.run([sys.executable, "-c", pusher_code], check=True)
 
 if __name__ == "__main__":
     import sys
-    # Usage: python account_rotator.py [1|2|3] or all
     choice = sys.argv[1] if len(sys.argv) > 1 else "1"
     if choice == "all":
         for acc in ACCOUNTS:
             run_stage(acc)
+    elif choice in ["1", "3"]:
+        target = [a for a in ACCOUNTS if a["id"] == int(choice)][0]
+        run_stage(target)
     else:
-        idx = int(choice) - 1
-        run_stage(ACCOUNTS[idx])
+        print("[!] Invalid account ID. Use '1', '3', or 'all'.")
