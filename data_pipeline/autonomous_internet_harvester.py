@@ -131,25 +131,52 @@ def distill_with_ai(poc_info):
         ]
     }
 
+REGISTRY_FILE = os.path.join(DATASETS_DIR, "seen_cves_registry.json")
+
+def load_registry():
+    if os.path.exists(REGISTRY_FILE):
+        try:
+            with open(REGISTRY_FILE, "r") as f:
+                return set(json.load(f))
+        except Exception:
+            pass
+    return set()
+
+def save_registry(seen_set):
+    with open(REGISTRY_FILE, "w") as f:
+        json.dump(sorted(list(seen_set)), f, indent=2)
+
 def harvest_and_append():
     pocs = fetch_recent_cve_pocs()
     if not pocs:
         print("[!] No new PoCs harvested today.")
         return 0
 
+    seen = load_registry()
+    fresh_pocs = [p for p in pocs if p["name"] not in seen]
+    skipped_count = len(pocs) - len(fresh_pocs)
+    print(f"[*] Found {len(fresh_pocs)} brand new CVEs (Skipped {skipped_count} already-seen exploits).")
+
+    if not fresh_pocs:
+        print("[✓] All harvested CVEs have already been processed and learned! No redundant training needed.")
+        return 0
+
     new_samples = []
-    print(f"[*] Distilling {len(pocs)} live exploits into Chain-of-Thought samples...")
-    for p in pocs:
+    print(f"[*] Distilling {len(fresh_pocs)} novel exploits into Root-Cause Chain-of-Thought samples...")
+    for p in fresh_pocs:
         sample = distill_with_ai(p)
         if sample:
             new_samples.append(sample)
+            seen.add(p["name"])
 
-    print(f"[*] Appending {len(new_samples)} fresh samples to {MASTER_DATASET}...")
-    with open(MASTER_DATASET, "a", encoding="utf-8") as f:
-        for s in new_samples:
-            f.write(json.dumps(s, ensure_ascii=False) + "\n")
+    if new_samples:
+        print(f"[*] Appending {len(new_samples)} fresh samples to {MASTER_DATASET}...")
+        with open(MASTER_DATASET, "a", encoding="utf-8") as f:
+            for s in new_samples:
+                f.write(json.dumps(s, ensure_ascii=False) + "\n")
+        save_registry(seen)
 
-    print(f"[✓] Harvest complete! Total master dataset expanded successfully.")
+    print(f"[✓] Harvest complete! Total master dataset expanded with {len(new_samples)} unique new samples.")
     return len(new_samples)
 
 if __name__ == "__main__":
