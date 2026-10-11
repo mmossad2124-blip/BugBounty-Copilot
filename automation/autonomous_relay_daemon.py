@@ -65,6 +65,9 @@ def step3_commit_and_push_to_github():
     print("[PHASE 3] Syncing Harvested Datasets & Verified DPO Pairs to GitHub Cloud...")
     print(f"{'='*70}")
     try:
+        gh_pat = os.environ.get("GH_PAT")
+        if gh_pat:
+            subprocess.run(["git", "remote", "set-url", "origin", f"https://x-access-token:{gh_pat}@github.com/mmossad2124-blip/BugBounty-Copilot.git"], cwd=REPO_DIR, check=False)
         subprocess.run(["git", "add", "data_pipeline/processed_datasets/", "sandbox/verified_dpo_pairs.jsonl"], cwd=REPO_DIR, check=True)
         subprocess.run(["git", "commit", "-m", "chore(auto): Autonomous Daily 0-Day Harvester & DPO Update"], cwd=REPO_DIR, check=True)
         subprocess.run(["git", "push", "origin", "main"], cwd=REPO_DIR, check=True)
