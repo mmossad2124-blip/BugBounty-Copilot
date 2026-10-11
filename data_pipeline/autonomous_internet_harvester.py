@@ -54,6 +54,60 @@ def fetch_recent_cve_pocs():
         print(f"[!] Warning fetching live GitHub PoCs: {e}")
     return pocs
 
+def fetch_project_zero_deep_dives():
+    """Fetches the latest root-cause memory and kernel research from Google Project Zero."""
+    print("[*] Harvesting Deep-Dive Root Cause Research from Google Project Zero...")
+    url = "https://googleprojectzero.blogspot.com/feeds/posts/default?alt=json"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    items = []
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+            entries = data.get("feed", {}).get("entry", [])
+            for e in entries:
+                title = e.get("title", {}).get("$t", "")
+                summary = e.get("summary", {}).get("$t", "") or title
+                link = ""
+                for l in e.get("link", []):
+                    if l.get("rel") == "alternate":
+                        link = l.get("href", "")
+                        break
+                if title:
+                    items.append({
+                        "name": f"ProjectZero: {title}",
+                        "description": summary[:500],
+                        "url": link,
+                        "source": "Google Project Zero"
+                    })
+            print(f"[✓] Harvested {len(items)} elite Project Zero research deep dives!")
+    except Exception as ex:
+        print(f"[!] Project Zero harvest notice: {ex}")
+    return items
+
+def fetch_github_security_advisories():
+    """Fetches high and critical security advisories (Huntr, Web, Cloud & Open Source)."""
+    print("[*] Harvesting Global Security Advisories (GitHub / Huntr)...")
+    url = "https://api.github.com/advisories?per_page=10"
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    items = []
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            advisories = json.loads(resp.read().decode())
+            for a in advisories:
+                ghsa_id = a.get("ghsa_id", "")
+                summary = a.get("summary", "") or a.get("description", "")
+                if ghsa_id:
+                    items.append({
+                        "name": f"{ghsa_id} - {summary[:80]}",
+                        "description": summary[:500],
+                        "url": a.get("html_url", ""),
+                        "source": "GitHub Security Advisories"
+                    })
+            print(f"[✓] Harvested {len(items)} official GitHub / Huntr security advisories!")
+    except Exception as ex:
+        print(f"[!] Advisory harvest notice: {ex}")
+    return items
+
 def distill_with_ai(poc_info):
     """Uses Cloudflare AI to synthesize raw exploit info into a Chain-of-Thought reasoning pair."""
     prompt = (
@@ -147,23 +201,28 @@ def save_registry(seen_set):
         json.dump(sorted(list(seen_set)), f, indent=2)
 
 def harvest_and_append():
-    pocs = fetch_recent_cve_pocs()
-    if not pocs:
-        print("[!] No new PoCs harvested today.")
+    candidates = []
+    candidates.extend(fetch_recent_cve_pocs())
+    candidates.extend(fetch_project_zero_deep_dives())
+    candidates.extend(fetch_github_security_advisories())
+
+    if not candidates:
+        print("[!] No intelligence feeds responded today.")
         return 0
 
     seen = load_registry()
-    fresh_pocs = [p for p in pocs if p["name"] not in seen]
-    skipped_count = len(pocs) - len(fresh_pocs)
-    print(f"[*] Found {len(fresh_pocs)} brand new CVEs (Skipped {skipped_count} already-seen exploits).")
+    fresh_candidates = [c for c in candidates if c["name"] not in seen]
+    skipped_count = len(candidates) - len(fresh_candidates)
+    print(f"[*] Pooled {len(candidates)} total intelligence items from Project Zero, GitHub & Advisories.")
+    print(f"[*] Found {len(fresh_candidates)} novel items (Skipped {skipped_count} already-seen items).")
 
-    if not fresh_pocs:
-        print("[✓] All harvested CVEs have already been processed and learned! No redundant training needed.")
+    if not fresh_candidates:
+        print("[✓] All harvested intelligence items have already been processed and learned! No redundant training needed.")
         return 0
 
     new_samples = []
-    print(f"[*] Distilling {len(fresh_pocs)} novel exploits into Root-Cause Chain-of-Thought samples...")
-    for p in fresh_pocs:
+    print(f"[*] Distilling {len(fresh_candidates)} novel items into Root-Cause Chain-of-Thought samples...")
+    for p in fresh_candidates:
         sample = distill_with_ai(p)
         if sample:
             new_samples.append(sample)
