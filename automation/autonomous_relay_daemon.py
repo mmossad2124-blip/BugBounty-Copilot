@@ -20,11 +20,21 @@ REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NOTEBOOKS_DIR = os.path.join(REPO_DIR, "notebooks")
 META_PATH = os.path.join(NOTEBOOKS_DIR, "kernel-metadata.json")
 
-ACCOUNT_1_TOKEN = "KGAT_8674338cd01a502688c872dcfb449c9c"
-ACCOUNT_1_USER = "mmossad2124"
+def load_token(acc_id, username, fallback=""):
+    creds_path = os.path.join(REPO_DIR, "accounts", f"account_{acc_id}_{username}.json")
+    if os.path.exists(creds_path):
+        try:
+            with open(creds_path) as f:
+                return json.load(f).get("credentials", {}).get("kaggle_api_token", fallback)
+        except Exception:
+            pass
+    return os.environ.get(f"KAGGLE_API_TOKEN_{acc_id}", fallback)
 
-ACCOUNT_3_TOKEN = "KGAT_48bbd3cfad1e206ad99d7b5eb66f22e8"
+ACCOUNT_1_USER = "mmossad2124"
+ACCOUNT_1_TOKEN = load_token(1, ACCOUNT_1_USER)
+
 ACCOUNT_3_USER = "mmossad2324"
+ACCOUNT_3_TOKEN = load_token(3, ACCOUNT_3_USER)
 
 def step1_harvest_internet_data():
     print(f"\n{'='*70}")
@@ -33,13 +43,20 @@ def step1_harvest_internet_data():
     script_path = os.path.join(REPO_DIR, "data_pipeline", "autonomous_internet_harvester.py")
     subprocess.run([sys.executable, script_path], check=True)
 
-def step2_commit_and_push_to_github():
+def step2_sandbox_verification_loop():
     print(f"\n{'='*70}")
-    print("[PHASE 2] Syncing Harvested Datasets to GitHub Cloud Repository...")
+    print("[PHASE 2] Autonomous Sandbox Verification: Testing Reasoning in Isolated Sandbox...")
+    print(f"{'='*70}")
+    sandbox_script = os.path.join(REPO_DIR, "sandbox", "live_dynamic_ai_sandbox.py")
+    subprocess.run([sys.executable, sandbox_script], check=True)
+
+def step3_commit_and_push_to_github():
+    print(f"\n{'='*70}")
+    print("[PHASE 3] Syncing Harvested Datasets & Verified DPO Pairs to GitHub Cloud...")
     print(f"{'='*70}")
     try:
-        subprocess.run(["git", "add", "data_pipeline/processed_datasets/"], cwd=REPO_DIR, check=True)
-        subprocess.run(["git", "commit", "-m", "chore(auto): Autonomous Daily 0-Day Harvester Update"], cwd=REPO_DIR, check=True)
+        subprocess.run(["git", "add", "data_pipeline/processed_datasets/", "sandbox/verified_dpo_pairs.jsonl"], cwd=REPO_DIR, check=True)
+        subprocess.run(["git", "commit", "-m", "chore(auto): Autonomous Daily 0-Day Harvester & DPO Update"], cwd=REPO_DIR, check=True)
         subprocess.run(["git", "push", "origin", "main"], cwd=REPO_DIR, check=True)
         print("[✓] Datasets synchronized with GitHub cloud!")
     except Exception as e:
@@ -112,19 +129,22 @@ def run_full_autonomous_relay():
     # 1. Scrape & Distill fresh CVEs
     step1_harvest_internet_data()
 
-    # 2. Push fresh datasets to GitHub
-    step2_commit_and_push_to_github()
+    # 2. Run Sandbox Verification & Generate DPO Samples
+    step2_sandbox_verification_loop()
 
-    # 3. Phase A: Wake up Account 1 (External Foothold & Web)
+    # 3. Push fresh datasets to GitHub
+    step3_commit_and_push_to_github()
+
+    # 4. Phase A: Wake up Account 1 (External Foothold & Web)
     print(f"\n{'='*70}")
-    print("[PHASE 3] Waking Up Account 1 (mmossad2124): Stage 1 External Breach Training...")
+    print("[PHASE 4] Waking Up Account 1 (mmossad2124): Stage 1 External Breach Training...")
     print(f"{'='*70}")
     trigger_kaggle_kernel(ACCOUNT_1_USER, ACCOUNT_1_TOKEN)
     wait_for_kernel_completion(ACCOUNT_1_USER, ACCOUNT_1_TOKEN)
 
-    # 4. Phase B: Wake up Account 3 (Kernel PrivEsc & AD)
+    # 5. Phase B: Wake up Account 3 (Kernel PrivEsc & AD)
     print(f"\n{'='*70}")
-    print("[PHASE 4] Handing Off to Account 3 (mmossad2324): Stage 2 Root Escalation Training...")
+    print("[PHASE 5] Handing Off to Account 3 (mmossad2324): Stage 2 Root Escalation Training...")
     print(f"{'='*70}")
     trigger_kaggle_kernel(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
     wait_for_kernel_completion(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
