@@ -1,4 +1,17 @@
 [
+  "Atlas-de-Poche",
+  "DotNetMicroservicesPoc",
+  "Music-Pocket",
+  "Naija-Pocket-Business-Center",
+  "Pocket-Stats-for-Umami",
+  "PocketOllama",
+  "ProjectZero:  Pointer leaks through pointer-keyed data structures",
+  "ProjectZero: A look at an Android ITW DNG exploit",
+  "ProjectZero: Defeating KASLR by Doing Nothing at All",
+  "ProjectZero: From Chrome renderer code exec to kernel with MSG_OOB",
+  "ProjectZero: Policy and Disclosure: 2025 Edition",
+  "ProjectZero: The Windows Registry Adventure #7: Attack surface analysis",
+  "ProjectZero: The Windows Registry Adventure #8: Practical exploitation of hive memory corruption",
   "[Advisory] GHSA-fmmf-xq98-g327 - Vikunja: Write-level project members can delete admin-tier link shares through a",
   "[Advisory] GHSA-fprf-r6rv-xg99 - Vikunja: Saved filter creation with an empty filter string recalculates task pos",
   "[Advisory] GHSA-hjx8-qv73-f7cm - Vikunja: Webhooks and link shares survive every revocation path, so a removed co",
@@ -11,5 +24,14 @@
   "[Project Zero] A look at an Android ITW DNG exploit",
   "[Project Zero] Defeating KASLR by Doing Nothing at All",
   "[Project Zero] From Chrome renderer code exec to kernel with MSG_OOB",
-  "[Project Zero] Pointer leaks through pointer-keyed data structures"
+  "[Project Zero] Pointer leaks through pointer-keyed data structures",
+  "ajman-thermal-memory-poc",
+  "jack-pockets",
+  "plan-pocket",
+  "pocket-media-clip-selector",
+  "pocket-money",
+  "pocket-quest",
+  "pocketmentor",
+  "pocketplan",
+  "sfx-lab-poc"
 ]
