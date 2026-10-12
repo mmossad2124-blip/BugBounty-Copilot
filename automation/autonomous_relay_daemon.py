@@ -102,6 +102,21 @@ def trigger_kaggle_kernel(username, token):
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
 
+    # Set exact node identity in notebook before push
+    nb_path = os.path.join(NOTEBOOKS_DIR, "BugBounty_Copilot_Kaggle_Trainer.ipynb")
+    try:
+        with open(nb_path, "r", encoding="utf-8") as nf:
+            nb = json.load(nf)
+        for cell in nb.get("cells", []):
+            if cell.get("cell_type") == "code":
+                for i, line in enumerate(cell.get("source", [])):
+                    if line.startswith('ACTIVE_NODE_USER = '):
+                        cell["source"][i] = f'ACTIVE_NODE_USER = "{username}" # Daemon auto-updated\n'
+        with open(nb_path, "w", encoding="utf-8") as nf:
+            json.dump(nb, nf, indent=1)
+    except Exception as e:
+        print(f"[!] Warning updating notebook active user: {{e}}")
+
     pusher_code = f"""
 import os, sys, ssl, time, urllib3.util.ssl_
 orig = urllib3.util.ssl_.create_urllib3_context
