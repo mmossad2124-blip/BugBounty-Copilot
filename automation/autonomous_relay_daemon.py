@@ -53,6 +53,10 @@ def step1_harvest_internet_data():
     cve_script = os.path.join(REPO_DIR, "data_pipeline", "autonomous_internet_harvester.py")
     subprocess.run([sys.executable, cve_script], check=False)
 
+    # 4. Legendary Historic Milestones & Hall-of-Fame Exploits
+    milestone_script = os.path.join(REPO_DIR, "data_pipeline", "legendary_milestone_intel.py")
+    subprocess.run([sys.executable, milestone_script], check=False)
+
 def step2_sandbox_verification_loop():
     print(f"\n{'='*70}")
     print("[PHASE 2] Autonomous Sandbox Verification: Testing Reasoning in Isolated Sandbox...")
