@@ -1,0 +1,24 @@
+{
+  "stage1": {
+    "total_samples": 20895,
+    "chunk_size": 2400,
+    "replay_size": 480,
+    "new_samples_per_chunk": 1920,
+    "current_offset": 0,
+    "completed_cycles": 0,
+    "total_cycles_needed": 11,
+    "is_completed": false
+  },
+  "stage2": {
+    "total_samples": 6022,
+    "chunk_size": 2400,
+    "replay_size": 480,
+    "new_samples_per_chunk": 1920,
+    "current_offset": 0,
+    "completed_cycles": 0,
+    "total_cycles_needed": 4,
+    "is_completed": false
+  },
+  "overall_epoch": 1,
+  "last_updated": "2026-10-12T13:41:43Z"
+}

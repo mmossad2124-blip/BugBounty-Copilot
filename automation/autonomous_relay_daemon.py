@@ -203,10 +203,34 @@ def wait_for_kernel_completion(username, token, max_wait_hours=4):
 
         time.sleep(120) # Poll every 2 minutes
 
+def step0_prepare_conveyor_chunks():
+    print(f"\n{'='*70}")
+    print("[PHASE 0] Industrial Conveyor: Slicing Active Chunks & Loading Replay Buffer...")
+    print(f"{'='*70}")
+    conveyor_script = os.path.join(REPO_DIR, "data_pipeline", "conveyor_manager.py")
+    subprocess.run([sys.executable, conveyor_script], check=True)
+
+def step7_advance_conveyor_cursor():
+    print(f"\n{'='*70}")
+    print("[PHASE 7] Advancing Industrial Conveyor Progress Cursor...")
+    print(f"{'='*70}")
+    conveyor_script = os.path.join(REPO_DIR, "data_pipeline", "conveyor_manager.py")
+    subprocess.run([sys.executable, conveyor_script, "advance"], check=True)
+    try:
+        subprocess.run(["git", "add", "data_pipeline/conveyor_cursor.json"], cwd=REPO_DIR, check=False)
+        subprocess.run(["git", "commit", "-m", "chore(conveyor): advance training cursor to next batch chunk"], cwd=REPO_DIR, check=False)
+        subprocess.run(["git", "push", "origin", "main"], cwd=REPO_DIR, check=False)
+        print("[✓] Updated conveyor cursor committed to GitHub!")
+    except Exception as e:
+        print(f"[!] Git sync note: {e}")
+
 def run_full_autonomous_relay():
     print(f"\n{'#'*75}")
     print("# 🚀 INITIATING 24/7 AUTONOMOUS BUG BOUNTY RELAY & TRAINING DAEMON")
     print(f"{'#'*75}")
+
+    # 0. Prepare Next Conveyor Chunks with Replay Buffer
+    step0_prepare_conveyor_chunks()
 
     # 1. Scrape & Distill fresh CVEs
     step1_harvest_internet_data()
@@ -219,14 +243,14 @@ def run_full_autonomous_relay():
 
     # 4. Phase A: Wake up Account 1 (External Foothold & Web)
     print(f"\n{'='*70}")
-    print("[PHASE 4] Waking Up Account 1 (mmossad2124): Stage 1 External Breach Training...")
+    print("[PHASE 4] Waking Up Account 1 (mmossad2124): Stage 1 Active Chunk Training...")
     print(f"{'='*70}")
     trigger_kaggle_kernel(ACCOUNT_1_USER, ACCOUNT_1_TOKEN)
     wait_for_kernel_completion(ACCOUNT_1_USER, ACCOUNT_1_TOKEN)
 
     # 5. Phase B: Wake up Account 3 (Kernel PrivEsc & AD)
     print(f"\n{'='*70}")
-    print("[PHASE 5] Handing Off to Account 3 (mmossad2324): Stage 2 Root Escalation Training...")
+    print("[PHASE 5] Handing Off to Account 3 (mmossad2324): Stage 2 Active Chunk Training...")
     print(f"{'='*70}")
     trigger_kaggle_kernel(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
     wait_for_kernel_completion(ACCOUNT_3_USER, ACCOUNT_3_TOKEN)
@@ -237,6 +261,9 @@ def run_full_autonomous_relay():
     print(f"{'='*70}")
     complex_sandbox = os.path.join(REPO_DIR, "sandbox", "complex_multiround_sandbox.py")
     subprocess.run([sys.executable, complex_sandbox], check=False)
+
+    # 7. Phase D: Advance Industrial Conveyor Offset for Next Run
+    step7_advance_conveyor_cursor()
 
     print(f"\n{'#'*75}")
     print("# [✓] ALL RELAY PHASES COMPLETED! MODEL BRAIN FULLY UPDATED FOR THE DAY.")
