@@ -132,6 +132,78 @@ def fetch_github_advisories(max_items=10):
         print(f"[!] Warning fetching Advisories: {e}")
     return items
 
+def fetch_unprotect_techniques(max_items=4):
+    """Fetches evasion and bypass techniques from the Unprotect Project."""
+    print("[*] Fetching evasion tradecraft from Unprotect Project...")
+    url = "https://api.github.com/repos/Unprotect-Project/ContributeV2/contents/Techniques"
+    headers = {"User-Agent": "Python"}
+    items = []
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            files = json.loads(resp.read().decode())
+            for f in files:
+                name = f.get("name", "")
+                if name and not name.startswith("."):
+                    items.append({
+                        "name": f"[Unprotect] {name}",
+                        "description": f"Evasion & defense bypass tradecraft: {name}. Low-level anti-analysis, memory obfuscation, and detection bypass.",
+                        "url": f.get("html_url", ""),
+                        "source": "Unprotect Project (Evasion Database)"
+                    })
+                    if len(items) >= max_items:
+                        break
+            print(f"[✓] Unprotect Project: Retrieved {len(items)} evasion techniques!")
+    except Exception as e:
+        print(f"[!] Warning fetching Unprotect: {e}")
+    return items
+
+def fetch_vx_underground(max_items=4):
+    """Fetches advanced low-level C++ malware & evasion mechanics from vx-underground."""
+    print("[*] Fetching advanced C++ evasion tradecraft from vx-underground...")
+    url = "https://api.github.com/repos/vxunderground/VX-API/contents/VX-API"
+    headers = {"User-Agent": "Python"}
+    items = []
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            files = json.loads(resp.read().decode())
+            for f in files:
+                name = f.get("name", "")
+                if name.endswith(".cpp") and any(k in name.lower() for k in ["bypass", "injection", "process", "hook", "debug", "token", "memory"]):
+                    items.append({
+                        "name": f"[vx-underground] {name}",
+                        "description": f"Low-level C/C++ OS internal mechanic: {name}. Process injection, memory manipulation, and privilege bypass.",
+                        "url": f.get("html_url", ""),
+                        "source": "vx-underground (Elite Research)"
+                    })
+                    if len(items) >= max_items:
+                        break
+            print(f"[✓] vx-underground: Retrieved {len(items)} low-level C++ items!")
+    except Exception as e:
+        print(f"[!] Warning fetching vx-underground: {e}")
+    return items
+
+def fetch_syswhispers_hellsgate(max_items=2):
+    """Fetches direct syscall & API unhooking research from SysWhispers3 and HellsGate."""
+    print("[*] Fetching Direct Syscall & API Unhooking research (SysWhispers/HellsGate)...")
+    items = [
+        {
+            "name": "[SysWhispers3 / HellsGate] Dynamic SSN Resolution & Direct Syscalls",
+            "description": "Bypassing User-Mode EDR API Hooks via manual runtime parsing of ntdll.dll export directory, dynamic System Service Number (SSN) sorting, and executing direct 'syscall' assembly stubs.",
+            "url": "https://github.com/klezVirus/SysWhispers3",
+            "source": "SysWhispers3 / HellsGate Research"
+        },
+        {
+            "name": "[HalosGate / TartarusGate] Hook Detection & Neighboring SSN Recovery",
+            "description": "Recovering original system call numbers when ntdll functions are hooked with JMP instructions by inspecting neighboring opcode offsets (Halo's Gate technique).",
+            "url": "https://github.com/am0nsec/HellsGate",
+            "source": "HellsGate / HalosGate Research"
+        }
+    ]
+    print(f"[✓] SysWhispers & HellsGate: Added {len(items)} direct syscall research primitives!")
+    return items[:max_items]
+
 def distill_with_ai(intel_item):
     """Distills raw threat research into structured Chain-of-Thought (CoT) format via Cloudflare Workers AI."""
     prompt = (
@@ -199,13 +271,17 @@ def run_multi_source_harvest():
     print(f"{'='*75}")
 
     all_items = []
-    # 1. Google Project Zero
+    # 1. Google Project Zero (0-Day Memory & Root Cause)
     all_items.extend(fetch_project_zero(max_items=4))
-    # 2. SpecterOps Insights
-    all_items.extend(fetch_rss_feed("SpecterOps", "https://posts.specterops.io/feed", max_items=4))
-    # 3. Kaspersky Securelist
+    # 2. Unprotect Project (Evasion & Anti-Analysis Mechanics)
+    all_items.extend(fetch_unprotect_techniques(max_items=4))
+    # 3. vx-underground (Low-level C++ Injection & Memory Exploitation)
+    all_items.extend(fetch_vx_underground(max_items=4))
+    # 4. SysWhispers3 & HellsGate (Direct Syscalls & API Unhooking)
+    all_items.extend(fetch_syswhispers_hellsgate(max_items=2))
+    # 5. Kaspersky Securelist (GReAT APT & Advanced Threat Intel)
     all_items.extend(fetch_rss_feed("Kaspersky Securelist", "https://securelist.com/feed/", max_items=4))
-    # 4. GitHub Advisories & Huntr
+    # 6. GitHub Advisories & Huntr (Web, AI, Cloud Criticals)
     all_items.extend(fetch_github_advisories(max_items=5))
 
     print(f"\n[*] Total Intelligence Items Harvested Across Feeds: {len(all_items)}")
