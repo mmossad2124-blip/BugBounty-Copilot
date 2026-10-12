@@ -167,6 +167,66 @@
           "focus": "Automated endpoint footprinting, public metadata correlation, and unauthenticated API leakage"
         }
       ]
+    },
+    {
+      "name": "Nation-State APT Profiles & TTP Mappings (MITRE ATT&CK)",
+      "description": "Tactics, Techniques, and Procedures (TTPs) of elite state-sponsored threat groups",
+      "sources": [
+        {
+          "name": "MITRE ATT&CK APT41 (Double Dragon / Winnti)",
+          "type": "mitre_group",
+          "url": "https://attack.mitre.org/groups/G0096/",
+          "focus": "BYOVD kernel driver exploitation, software supply chain injection, multi-stage loaders"
+        },
+        {
+          "name": "MITRE ATT&CK APT29 (Cozy Bear / Midnight Blizzard)",
+          "type": "mitre_group",
+          "url": "https://attack.mitre.org/groups/G0016/",
+          "focus": "OAuth app abuse, Golden SAML, token theft, cloud administrative persistence"
+        },
+        {
+          "name": "MITRE ATT&CK Lazarus Group (HIDDEN COBRA)",
+          "type": "mitre_group",
+          "url": "https://attack.mitre.org/groups/G0032/",
+          "focus": "DeFi protocol exploitation, trojanized npm/PyPI packages, memory-only execution"
+        },
+        {
+          "name": "MITRE ATT&CK MuddyWater (Static Kitten)",
+          "type": "mitre_group",
+          "url": "https://attack.mitre.org/groups/G0069/",
+          "focus": "PowerShell Living-off-the-Land, Exchange Server web shells, RMM weaponization"
+        }
+      ]
+    },
+    {
+      "name": "CISA & US-CERT Joint Cybersecurity Advisories & KEV",
+      "description": "Official US-CERT Joint Technical Advisories (AA series) and Known Exploited Vulnerabilities catalog",
+      "sources": [
+        {
+          "name": "CISA Known Exploited Vulnerabilities (KEV) Catalog",
+          "type": "api_json",
+          "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json",
+          "focus": "Real-time telemetry and root causes of 1,700+ actively exploited zero-days in the wild"
+        },
+        {
+          "name": "CISA Joint Cybersecurity Advisories (AA Series)",
+          "type": "advisory_web",
+          "url": "https://www.cisa.gov/news-events/cybersecurity-advisories",
+          "focus": "Critical infrastructure attacks, edge VPN appliance zero-days, and boundary compromises"
+        }
+      ]
+    },
+    {
+      "name": "Mandiant Threat Intelligence & Actor Forensics",
+      "description": "Actor profiling, digital forensic reverse engineering, and threat emulation tradecraft",
+      "sources": [
+        {
+          "name": "Mandiant Threat Research & Emulation",
+          "type": "intel_reports",
+          "url": "https://cloud.google.com/blog/topics/threat-intelligence",
+          "focus": "Volt Typhoon SOHO edge implants, MFA session token hijacking, supply chain forensics"
+        }
+      ]
     }
   ]
 }
