@@ -79,6 +79,29 @@ def step3_commit_and_push_to_github():
     except Exception as e:
         print(f"[!] Git sync notice (no changes or already committed): {e}")
 
+def fetch_partner_lora_urls(target_user):
+    """Fetches signed direct download URLs for the latest trained LoRA adapter from partner node."""
+    check_order = [("mmossad2324", ACCOUNT_3_TOKEN), ("mmossad2124", ACCOUNT_1_TOKEN)]
+    if target_user == "mmossad2324":
+        check_order = [("mmossad2124", ACCOUNT_1_TOKEN), ("mmossad2324", ACCOUNT_3_TOKEN)]
+
+    for user, token in check_order:
+        if not token:
+            continue
+        try:
+            url = f"https://www.kaggle.com/api/v1/kernels/output?userName={user}&kernelSlug=bugbounty-copilot-trainer"
+            headers = {"Authorization": f"Bearer {token}", "User-Agent": "KaggleWatcher/1.0"}
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+            files = {f["fileName"]: f["url"] for f in data.get("files", []) if "bugbounty_copilot_lora" in f.get("fileName", "")}
+            if files and any("adapter_model.safetensors" in k for k in files):
+                print(f"[✓] Retrieved {len(files)} signed LoRA weight URLs from node {user}!")
+                return files
+        except Exception as e:
+            print(f"[!] Warning checking weights on {user}: {e}")
+    return {}
+
 def trigger_kaggle_kernel(username, token):
     """Pushes and starts a Kaggle kernel using python with SSL patch."""
     print(f"[*] Triggering Kaggle GPU Runner for node: {username}...")
@@ -102,7 +125,8 @@ def trigger_kaggle_kernel(username, token):
     with open(META_PATH, "w") as f:
         json.dump(meta, f, indent=2)
 
-    # Set exact node identity in notebook before push
+    # Set exact node identity and latest weights in notebook before push
+    lora_urls = fetch_partner_lora_urls(username)
     nb_path = os.path.join(NOTEBOOKS_DIR, "BugBounty_Copilot_Kaggle_Trainer.ipynb")
     try:
         with open(nb_path, "r", encoding="utf-8") as nf:
@@ -112,10 +136,13 @@ def trigger_kaggle_kernel(username, token):
                 for i, line in enumerate(cell.get("source", [])):
                     if line.startswith('ACTIVE_NODE_USER = '):
                         cell["source"][i] = f'ACTIVE_NODE_USER = "{username}" # Daemon auto-updated\n'
+                    elif line.startswith('LATEST_LORA_URLS = '):
+                        cell["source"][i] = f'LATEST_LORA_URLS = {json.dumps(lora_urls)} # Daemon injected signed URLs\n'
         with open(nb_path, "w", encoding="utf-8") as nf:
             json.dump(nb, nf, indent=1)
+        print(f"[✓] Notebook configured with {len(lora_urls)} accumulated LoRA weights!")
     except Exception as e:
-        print(f"[!] Warning updating notebook active user: {{e}}")
+        print(f"[!] Warning updating notebook: {e}")
 
     pusher_code = f"""
 import os, sys, ssl, time, urllib3.util.ssl_
