@@ -265,9 +265,69 @@ def run_full_autonomous_relay():
     # 7. Phase D: Advance Industrial Conveyor Offset for Next Run
     step7_advance_conveyor_cursor()
 
+    # 8. Phase E: Perpetual Auto-Chaining (Immediate Self-Dispatch for Next Cycle)
+    step8_auto_chain_next_cycle()
+
     print(f"\n{'#'*75}")
     print("# [✓] ALL RELAY PHASES COMPLETED! MODEL BRAIN FULLY UPDATED FOR THE DAY.")
     print(f"{'#'*75}\n")
+
+def get_github_pat():
+    pat = os.environ.get("GH_PAT")
+    if pat:
+        return pat
+    try:
+        remote_url = subprocess.check_output(["git", "remote", "get-url", "origin"], cwd=REPO_DIR, text=True).strip()
+        if "@github.com" in remote_url and ":" in remote_url:
+            user_part = remote_url.split("@github.com")[0].split("/")[-1]
+            if ":" in user_part:
+                return user_part.split(":")[-1]
+    except Exception:
+        pass
+    return ""
+
+def step8_auto_chain_next_cycle():
+    """Automatically triggers the next continuous conveyor cycle via GitHub Actions API."""
+    gh_pat = get_github_pat()
+    if not gh_pat:
+        print("[!] No GitHub access token available for auto-chaining.")
+        return
+
+    cursor_path = os.path.join(REPO_DIR, "data_pipeline", "conveyor_cursor.json")
+    cursor = {}
+    if os.path.exists(cursor_path):
+        try:
+            with open(cursor_path, "r", encoding="utf-8") as f:
+                cursor = json.load(f)
+        except Exception:
+            pass
+
+    s1_done = cursor.get("stage1", {}).get("is_completed", False)
+    s2_done = cursor.get("stage2", {}).get("is_completed", False)
+    s1_cycle = cursor.get("stage1", {}).get("completed_cycles", 0)
+
+    print(f"\n{'='*70}")
+    if s1_done and s2_done:
+        print("🎉 [INDUSTRIAL MILESTONE] FULL 27,000 SAMPLES 100% COMPLETED!")
+        print("🚀 Progressing to Tier-2 32-Source Threat Intel Arsenal...")
+    else:
+        print(f"🔄 [AUTO-CHAIN] Self-Perpetuating Loop: Auto-Triggering Cycle {s1_cycle + 1}...")
+    print(f"{'='*70}")
+
+    url = "https://api.github.com/repos/mmossad2124-blip/BugBounty-Copilot/actions/workflows/autonomous_24_7_loop.yml/dispatches"
+    headers = {
+        "Authorization": f"Bearer {gh_pat}",
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "AutoChainConductor/1.0"
+    }
+    data = json.dumps({"ref": "main"}).encode("utf-8")
+    try:
+        time.sleep(30)
+        req = urllib.request.Request(url, data=data, headers=headers)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            print(f"[✓✓✓] Cycle {s1_cycle + 1} auto-dispatched successfully! (HTTP {resp.status})")
+    except Exception as e:
+        print(f"[!] Auto-chain dispatch notice: {e}")
 
 if __name__ == "__main__":
     run_full_autonomous_relay()
