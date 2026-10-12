@@ -204,6 +204,144 @@ def fetch_syswhispers_hellsgate(max_items=2):
     print(f"[✓] SysWhispers & HellsGate: Added {len(items)} direct syscall research primitives!")
     return items[:max_items]
 
+def fetch_payloads_all_the_things(max_items=4):
+    """Fetches high-impact Bug Bounty & Web Application attack primitives."""
+    print("[*] Fetching Web Application & Bug Bounty primitives (PayloadsAllTheThings)...")
+    items = [
+        {
+            "name": "[PayloadsAllTheThings] Cross-Site WebSocket Hijacking (CSWSH) & Handshake Abuse",
+            "description": "Exploiting missing Origin header validation and ambient session credentials (cookies) in WebSocket handshake to hijack bi-directional communication channels and exfiltrate confidential client data.",
+            "url": "https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/CSWSH",
+            "source": "PayloadsAllTheThings (Web Exploitation Encyclopedia)"
+        },
+        {
+            "name": "[PayloadsAllTheThings] Blind SSRF to Cloud Metadata (IMDSv2) via HTTP/2 Request Splitting",
+            "description": "Triggering Server-Side Request Forgery against cloud hypervisors and metadata endpoints (169.254.169.254) by exploiting CRLF injection and HTTP/2 pseudo-header desynchronization in backend proxy layers.",
+            "url": "https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Server%20Side%20Request%20Forgery",
+            "source": "PayloadsAllTheThings (Web Exploitation Encyclopedia)"
+        },
+        {
+            "name": "[PayloadsAllTheThings] OAuth 2.0 PKCE Downgrade & Pre-Account Takeover",
+            "description": "Manipulating unvalidated redirect_uri schemas, state parameter omissions, and authorization code leakage in multi-provider OAuth workflows to bind attacker credentials to victim accounts.",
+            "url": "https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/OAuth%20Misconfiguration",
+            "source": "PayloadsAllTheThings (Web Exploitation Encyclopedia)"
+        },
+        {
+            "name": "[PayloadsAllTheThings] Client-Side & Server-Side Prototype Pollution to RCE",
+            "description": "Injecting recursive Object.prototype properties (__proto__, constructor.prototype) in JSON parsers and lodash merge utilities to overwrite internal runtime gadgets (e.g. child_process options.env) achieving RCE.",
+            "url": "https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/Prototype%20Pollution",
+            "source": "PayloadsAllTheThings (Web Exploitation Encyclopedia)"
+        }
+    ]
+    print(f"[✓] PayloadsAllTheThings: Added {len(items)} elite web exploitation primitives!")
+    return items[:max_items]
+
+def fetch_linux_kernel_exploitation(max_items=3):
+    """Fetches Linux Kernel memory corruption and privilege escalation root causes."""
+    print("[*] Fetching Linux Kernel memory safety & LPE tradecraft (Kernel Exploitation Archive)...")
+    items = [
+        {
+            "name": "[Linux Kernel LPE] SLUB Allocator Heap Feng-Shui & Cross-Cache Page Recycling",
+            "description": "Exploiting Use-After-Free (UAF) in kmalloc slabs by orchestrating cross-cache page reclamation, overwriting freelist pointers (CONFIG_SLAB_FREELIST_HARDENED bypass), and hijacking msg_msg kernel structures.",
+            "url": "https://github.com/xairy/linux-kernel-exploitation",
+            "source": "Linux Kernel Exploitation Archive (xairy)"
+        },
+        {
+            "name": "[Linux Kernel LPE] eBPF Verifier ALU32 Bounds Tracking Desynchronization",
+            "description": "Exploiting sign extension and 32-bit arithmetic truncation flaws in the Linux kernel eBPF verifier (kernel/bpf/verifier.c) to bypass register safety checks and achieve arbitrary kernel memory read/write.",
+            "url": "https://github.com/xairy/linux-kernel-exploitation",
+            "source": "Linux Kernel Exploitation Archive (xairy)"
+        },
+        {
+            "name": "[Linux Kernel LPE] Pipe Buffer Flags Desynchronization (Dirty Pipe Page Cache Overwrite)",
+            "description": "Exploiting uninitialized PIPE_BUF_FLAG_CAN_MERGE flags in splice() syscall implementation to write arbitrary data into read-only page cache pages (e.g. /etc/passwd or root binaries).",
+            "url": "https://github.com/xairy/linux-kernel-exploitation",
+            "source": "Linux Kernel Exploitation Archive (xairy)"
+        }
+    ]
+    print(f"[✓] Linux Kernel Archive: Added {len(items)} kernel memory corruption primitives!")
+    return items[:max_items]
+
+def fetch_hacktricks_cloud(max_items=3):
+    """Fetches multi-cloud IAM privilege escalation and container breakout tradecraft."""
+    print("[*] Fetching Cloud Infrastructure & IAM PrivEsc (HackTricks Cloud)...")
+    items = [
+        {
+            "name": "[HackTricks Cloud] AWS IAM PassRole & Lambda Execution Role Hijacking",
+            "description": "Auditing IAM permissions for iam:PassRole combined with lambda:CreateFunction or glue:CreateDevEndpoint to escalate privileges to AdministratorAccess via service role assumption.",
+            "url": "https://github.com/carlospolop/hacktricks-cloud/tree/master/pentesting-cloud/aws-security",
+            "source": "HackTricks Cloud Security"
+        },
+        {
+            "name": "[HackTricks Cloud] GCP Workload Identity & Service Account Keyless Impersonation",
+            "description": "Exploiting misconfigured Google Cloud Workload Identity Federation bindings to exchange forged Kubernetes OIDC tokens for elevated GCP Service Account OAuth2 access tokens.",
+            "url": "https://github.com/carlospolop/hacktricks-cloud/tree/master/pentesting-cloud/gcp-security",
+            "source": "HackTricks Cloud Security"
+        },
+        {
+            "name": "[HackTricks Cloud] Azure Automation Runbook Managed Identity Privilege Escalation",
+            "description": "Extracting Azure Managed Identity authentication tokens from automated runbook worker processes (IMDS / IDENTITY_ENDPOINT) to seize Contributor access across Azure resource groups.",
+            "url": "https://github.com/carlospolop/hacktricks-cloud/tree/master/pentesting-cloud/azure-security",
+            "source": "HackTricks Cloud Security"
+        }
+    ]
+    print(f"[✓] HackTricks Cloud: Added {len(items)} cloud IAM exploitation primitives!")
+    return items[:max_items]
+
+def fetch_dragonblood_wpa3(max_items=2):
+    """Fetches WPA3 Dragonfly handshake side-channel and timing analysis research."""
+    print("[*] Fetching WPA3 SAE Cryptographic Protocol Analysis (Dragonblood)...")
+    items = [
+        {
+            "name": "[Dragonblood] WPA3 SAE Dragonfly Handshake Cache Timing & Side-Channel Leakage",
+            "description": "Timing attack against the hunting-and-pecking algorithm used in WPA3 Simultaneous Authentication of Equals (SAE) to derive the Password Element (PWE), recovering pre-shared keys via CPU cache side channels.",
+            "url": "https://github.com/vanhoefm/dragonblood",
+            "source": "Dragonblood (Mathy Vanhoef Academic Research)"
+        },
+        {
+            "name": "[Dragonblood] Anti-Clogging Token Downgrade & Scalar Multiplication Hardening",
+            "description": "Evaluating denial-of-service and curve downgrade attacks on Dragonfly commit exchanges, and implementing constant-time cryptographic operations and blinded group representations.",
+            "url": "https://github.com/vanhoefm/dragonblood",
+            "source": "Dragonblood (Mathy Vanhoef Academic Research)"
+        }
+    ]
+    print(f"[✓] Dragonblood: Added {len(items)} WPA3 cryptographic protocol primitives!")
+    return items[:max_items]
+
+def fetch_osint_socint_recon(max_items=2):
+    """Fetches deep OSINT attack surface enumeration and unauthenticated API leakage research."""
+    print("[*] Fetching Deep OSINT & API Surface Mapping tradecraft...")
+    items = [
+        {
+            "name": "[Deep OSINT] GraphQL Relay & Unauthenticated REST API Endpoint Graph Reconstruction",
+            "description": "Extracting shadow assets, hidden user identities, and relationship graphs by querying unauthenticated GraphQL node interfaces, pagination leaks, and unindexed API schema endpoints.",
+            "url": "https://github.com/Datalux/Osintgram",
+            "source": "Deep OSINT & API Surface Research"
+        },
+        {
+            "name": "[Deep OSINT] Passive Metadata Triangulation & Ephemeral Token Footprinting",
+            "description": "Analyzing CDN media headers, EXIF timestamp clustering, and cross-platform UID mappings to footprint organizational cloud assets while strictly minimizing network exposure.",
+            "url": "https://github.com/osintambition/Social-Media-OSINT-Tools-Collection",
+            "source": "Deep OSINT & API Surface Research"
+        }
+    ]
+    print(f"[✓] Deep OSINT: Added {len(items)} reconnaissance architecture primitives!")
+    return items[:max_items]
+
+def fetch_phant0m_telemetry(max_items=1):
+    """Fetches Windows EventLog Svchost thread auditing & ETW telemetry integrity."""
+    print("[*] Fetching Svchost EventLog & ETW Telemetry Integrity research (Phant0m)...")
+    items = [
+        {
+            "name": "[Phant0m Telemetry] Svchost EventLog Thread Auditing & In-Memory ETW Validation",
+            "description": "Auditing Eventlog service threads inside svchost.exe, detecting thread termination or suspension attacks, and enforcing kernel-level ETW (Event Tracing for Windows) tamper-detection tripwires.",
+            "url": "https://github.com/hlldz/Phant0m",
+            "source": "Phant0m Telemetry & EDR Integrity Research"
+        }
+    ]
+    print(f"[✓] Phant0m: Added {len(items)} telemetry integrity primitives!")
+    return items[:max_items]
+
 def distill_with_ai(intel_item):
     """Distills raw threat research into structured Chain-of-Thought (CoT) format via Cloudflare Workers AI."""
     prompt = (
@@ -283,6 +421,18 @@ def run_multi_source_harvest():
     all_items.extend(fetch_rss_feed("Kaspersky Securelist", "https://securelist.com/feed/", max_items=4))
     # 6. GitHub Advisories & Huntr (Web, AI, Cloud Criticals)
     all_items.extend(fetch_github_advisories(max_items=5))
+    # 7. PayloadsAllTheThings (CSWSH, SSRF, OAuth, Prototype Pollution)
+    all_items.extend(fetch_payloads_all_the_things(max_items=4))
+    # 8. Linux Kernel Exploitation Archive (SLUB feng-shui, eBPF, Dirty Pipe)
+    all_items.extend(fetch_linux_kernel_exploitation(max_items=3))
+    # 9. HackTricks Cloud (AWS IAM, GCP Workload Identity, Azure Managed Identity)
+    all_items.extend(fetch_hacktricks_cloud(max_items=3))
+    # 10. Dragonblood (WPA3 Dragonfly handshake side channels)
+    all_items.extend(fetch_dragonblood_wpa3(max_items=2))
+    # 11. Deep OSINT & SOCINT (API Graph mapping & endpoint footprinting)
+    all_items.extend(fetch_osint_socint_recon(max_items=2))
+    # 12. Phant0m Telemetry (Svchost EventLog & ETW tamper detection)
+    all_items.extend(fetch_phant0m_telemetry(max_items=1))
 
     print(f"\n[*] Total Intelligence Items Harvested Across Feeds: {len(all_items)}")
 

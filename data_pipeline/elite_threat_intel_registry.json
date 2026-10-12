@@ -113,6 +113,60 @@
           "focus": "Tag 35/44/38 order book integrity, WebSocket trading session hijacking, API secret dumping"
         }
       ]
+    },
+    {
+      "name": "Web & Bug Bounty Surface (PayloadsAllTheThings & WebSockets)",
+      "description": "Deep web application root-cause flaws, Cross-Site WebSocket Hijacking (CSWSH), SSRF, and OAuth race conditions",
+      "sources": [
+        {
+          "name": "PayloadsAllTheThings",
+          "type": "git",
+          "url": "https://github.com/swisskyrepo/PayloadsAllTheThings",
+          "focus": "CSWSH, SSRF, IDOR, GraphQL, Prototype Pollution, and Web Cache Poisoning methodologies"
+        },
+        {
+          "name": "Linux Kernel Exploitation Archive",
+          "type": "git",
+          "url": "https://github.com/xairy/linux-kernel-exploitation",
+          "focus": "Heap feng-shui, SLUB allocator mechanics, dirtypipe/dirtycow, and eBPF privilege escalation"
+        }
+      ]
+    },
+    {
+      "name": "Cloud Infrastructure & Multi-Cloud IAM Security",
+      "description": "AWS, GCP, and Azure privilege escalation, IMDSv2 metadata SSRF, and identity abuse",
+      "sources": [
+        {
+          "name": "HackTricks Cloud Security",
+          "type": "git",
+          "url": "https://github.com/carlospolop/hacktricks-cloud",
+          "focus": "AWS IAM PrivEsc, IMDSv2 SSRF bypass, GCP Service Account token impersonation, Azure RBAC escape"
+        }
+      ]
+    },
+    {
+      "name": "Wireless Protocols & Side-Channel Research",
+      "description": "WPA3 SAE Dragonfly handshake analysis, cryptographic timing side channels, and mitigations",
+      "sources": [
+        {
+          "name": "Dragonblood (WPA3 SAE Analysis)",
+          "type": "academic_git",
+          "url": "https://github.com/vanhoefm/dragonblood",
+          "focus": "Dragonfly handshake cache/timing side-channel attacks and constant-time math hardening"
+        }
+      ]
+    },
+    {
+      "name": "Advanced OSINT & Attack Surface Footprinting",
+      "description": "Public API correlation, asset surface enumeration, and defensive exposure minimization",
+      "sources": [
+        {
+          "name": "Deep OSINT & API Surface Mapping",
+          "type": "git",
+          "url": "https://github.com/Datalux/Osintgram",
+          "focus": "Automated endpoint footprinting, public metadata correlation, and unauthenticated API leakage"
+        }
+      ]
     }
   ]
 }
