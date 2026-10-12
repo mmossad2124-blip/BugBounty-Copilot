@@ -132,54 +132,58 @@ def fetch_github_advisories(max_items=10):
         print(f"[!] Warning fetching Advisories: {e}")
     return items
 
-def fetch_unprotect_techniques(max_items=4):
-    """Fetches evasion and bypass techniques from the Unprotect Project."""
-    print("[*] Fetching evasion tradecraft from Unprotect Project...")
+def fetch_unprotect_techniques(max_items=8):
+    """Fetches evasion and bypass techniques from the Unprotect Project archives."""
+    print("[*] Fetching evasion tradecraft from Unprotect Project archives...")
     url = "https://api.github.com/repos/Unprotect-Project/ContributeV2/contents/Techniques"
     headers = {"User-Agent": "Python"}
     items = []
+    seen = load_seen()
     try:
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as resp:
             files = json.loads(resp.read().decode())
             for f in files:
                 name = f.get("name", "")
-                if name and not name.startswith("."):
+                full_name = f"[Unprotect] {name}"
+                if name and not name.startswith(".") and full_name not in seen:
                     items.append({
-                        "name": f"[Unprotect] {name}",
+                        "name": full_name,
                         "description": f"Evasion & defense bypass tradecraft: {name}. Low-level anti-analysis, memory obfuscation, and detection bypass.",
                         "url": f.get("html_url", ""),
                         "source": "Unprotect Project (Evasion Database)"
                     })
                     if len(items) >= max_items:
                         break
-            print(f"[✓] Unprotect Project: Retrieved {len(items)} evasion techniques!")
+            print(f"[✓] Unprotect Project: Retrieved {len(items)} fresh historical evasion techniques!")
     except Exception as e:
         print(f"[!] Warning fetching Unprotect: {e}")
     return items
 
-def fetch_vx_underground(max_items=4):
-    """Fetches advanced low-level C++ malware & evasion mechanics from vx-underground."""
-    print("[*] Fetching advanced C++ evasion tradecraft from vx-underground...")
+def fetch_vx_underground(max_items=8):
+    """Fetches advanced low-level C++ malware & evasion mechanics from vx-underground archives."""
+    print("[*] Fetching advanced C++ evasion tradecraft from vx-underground archives...")
     url = "https://api.github.com/repos/vxunderground/VX-API/contents/VX-API"
     headers = {"User-Agent": "Python"}
     items = []
+    seen = load_seen()
     try:
         req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=15) as resp:
             files = json.loads(resp.read().decode())
             for f in files:
                 name = f.get("name", "")
-                if name.endswith(".cpp") and any(k in name.lower() for k in ["bypass", "injection", "process", "hook", "debug", "token", "memory"]):
+                full_name = f"[vx-underground] {name}"
+                if name.endswith(".cpp") and full_name not in seen and any(k in name.lower() for k in ["bypass", "injection", "process", "hook", "debug", "token", "memory", "thread", "payload", "amsi", "etw"]):
                     items.append({
-                        "name": f"[vx-underground] {name}",
+                        "name": full_name,
                         "description": f"Low-level C/C++ OS internal mechanic: {name}. Process injection, memory manipulation, and privilege bypass.",
                         "url": f.get("html_url", ""),
                         "source": "vx-underground (Elite Research)"
                     })
                     if len(items) >= max_items:
                         break
-            print(f"[✓] vx-underground: Retrieved {len(items)} low-level C++ items!")
+            print(f"[✓] vx-underground: Retrieved {len(items)} fresh historical C++ primitives!")
     except Exception as e:
         print(f"[!] Warning fetching vx-underground: {e}")
     return items
@@ -374,30 +378,34 @@ def fetch_mitre_apt_groups(max_items=4):
     print(f"[✓] MITRE ATT&CK: Added {len(items)} nation-state actor TTP primitives!")
     return items[:max_items]
 
-def fetch_cisa_kev_and_advisories(max_items=4):
-    """Fetches in-the-wild exploited zero-days directly from the official CISA KEV JSON catalog."""
-    print("[*] Fetching live actively-exploited zero-days from CISA KEV Catalog...")
+def fetch_cisa_kev_and_advisories(max_items=8):
+    """Fetches in-the-wild exploited vulnerabilities directly from the official CISA KEV JSON catalog."""
+    print("[*] Fetching historical and live actively-exploited CVEs from CISA KEV Catalog...")
     url = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
     items = []
+    seen = load_seen()
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=12) as resp:
             data = json.loads(resp.read().decode())
-            vulns = data.get("vulnerabilities", [])[-max_items:]
+            vulns = data.get("vulnerabilities", [])
             for v in reversed(vulns):
                 cve = v.get("cveID", "")
                 vendor = v.get("vendorProject", "")
                 prod = v.get("product", "")
                 name = v.get("vulnerabilityName", "")
                 desc = v.get("shortDescription", "")
-                if cve:
+                full_name = f"[CISA KEV] {cve}: {vendor} {prod} - {name}"
+                if cve and full_name not in seen:
                     items.append({
-                        "name": f"[CISA KEV] {cve}: {vendor} {prod} - {name}",
+                        "name": full_name,
                         "description": f"CISA Known Exploited Vulnerability: {desc}. Actively leveraged in the wild by threat actors for initial access and boundary compromise.",
                         "url": f"https://nvd.nist.gov/vuln/detail/{cve}",
                         "source": "CISA & US-CERT KEV Catalog"
                     })
-            print(f"[✓] CISA KEV: Retrieved {len(items)} live in-the-wild exploited CVEs!")
+                    if len(items) >= max_items:
+                        break
+            print(f"[✓] CISA KEV: Retrieved {len(items)} fresh historical in-the-wild exploited CVEs!")
     except Exception as e:
         print(f"[!] Warning fetching CISA KEV: {e}")
         # Curated fallback
