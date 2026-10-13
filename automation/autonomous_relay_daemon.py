@@ -104,6 +104,22 @@ def fetch_partner_lora_urls(target_user):
 
 def trigger_kaggle_kernel(username, token):
     """Pushes and starts a Kaggle kernel using python with SSL patch."""
+    print(f"[*] Checking Kaggle status for node: {username} before triggering...")
+    
+    # Pre-check: Never trigger duplicate kernel if one is already running/queued
+    status_url = f"https://www.kaggle.com/api/v1/kernels/status?userName={username}&kernelSlug=bugbounty-copilot-trainer"
+    headers = {"Authorization": f"Bearer {token}", "User-Agent": "KaggleWatcher/1.0"}
+    try:
+        req = urllib.request.Request(status_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+            st = data.get("status", "")
+            if st in ["running", "queued"]:
+                print(f"[!] Node {username} is ALREADY {st.upper()}! Skipping duplicate push to preserve GPU quota.")
+                return
+    except Exception as e:
+        print(f"[!] Status check note: {e}")
+
     print(f"[*] Triggering Kaggle GPU Runner for node: {username}...")
     
     # Write token file for Kaggle CLI / API
@@ -321,6 +337,18 @@ def step8_auto_chain_next_cycle():
     else:
         print(f"🔄 [AUTO-CHAIN] Self-Perpetuating Loop: Auto-Triggering Cycle {s1_cycle + 1}...")
     print(f"{'='*70}")
+
+    # Safeguard: Check if another workflow run is already in_progress
+    try:
+        check_url = "https://api.github.com/repos/mmossad2124-blip/BugBounty-Copilot/actions/runs?status=in_progress"
+        c_req = urllib.request.Request(check_url, headers={"Authorization": f"Bearer {gh_pat}", "User-Agent": "AutoChainConductor/1.0"})
+        with urllib.request.urlopen(c_req, timeout=10) as c_resp:
+            active = json.loads(c_resp.read().decode()).get("workflow_runs", [])
+            if len(active) > 1:
+                print(f"[!] Warning: {len(active)} workflow runs are already active! Skipping dispatch to prevent duplicate executions.")
+                return
+    except Exception as e:
+        print(f"[!] Active run check note: {e}")
 
     url = "https://api.github.com/repos/mmossad2124-blip/BugBounty-Copilot/actions/workflows/autonomous_24_7_loop.yml/dispatches"
     headers = {
