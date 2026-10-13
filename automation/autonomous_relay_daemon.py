@@ -289,8 +289,9 @@ def run_full_autonomous_relay():
     # 7. Phase D: Advance Industrial Conveyor Offset for Next Run
     step7_advance_conveyor_cursor()
 
-    # 8. Phase E: Perpetual Auto-Chaining (Immediate Self-Dispatch for Next Cycle)
-    step8_auto_chain_next_cycle()
+    # 8. Phase E: Perpetual Auto-Chaining (DISABLED by user order to preserve GPU hours)
+    # step8_auto_chain_next_cycle()
+    print("[*] Auto-chaining is DISABLED. Loop safely paused.")
 
     print(f"\n{'#'*75}")
     print("# [✓] ALL RELAY PHASES COMPLETED! MODEL BRAIN FULLY UPDATED FOR THE DAY.")
@@ -312,7 +313,8 @@ def get_github_pat():
 
 def step8_auto_chain_next_cycle():
     """Automatically triggers the next continuous conveyor cycle via GitHub Actions API."""
-    gh_pat = get_github_pat()
+    print("[!] Auto-chaining has been explicitly DISABLED to preserve GPU hours.")
+    return
     if not gh_pat:
         print("[!] No GitHub access token available for auto-chaining.")
         return
