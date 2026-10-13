@@ -1,0 +1,82 @@
+name: 🚀 Cloud Agent & HexStrike AI Sandbox
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Operation Mode (interactive_web_ui / automated_scan)'
+        required: true
+        default: 'interactive_web_ui'
+        type: choice
+        options:
+          - interactive_web_ui
+          - automated_scan
+      target_url:
+        description: 'Target Scope URL (for automated scan)'
+        required: false
+        default: 'http://testphp.vulnweb.com'
+
+jobs:
+  launch_cloud_agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # Up to 6 hours continuous cloud execution
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Cloud Agent & HexStrike Docker Sandbox
+        run: |
+          echo "Building 100% isolated Docker sandbox with HexStrike AI and security tools..."
+          docker build -t bugbounty-cloud-agent -f docker/Dockerfile.cloud_agent .
+
+      - name: Run Interactive Web UI via Cloudflare Tunnel
+        if: ${{ github.event.inputs.mode == 'interactive_web_ui' }}
+        run: |
+          echo "=========================================================================="
+          echo "🌐 Starting HexStrike Server & Streamlit Web UI in Docker..."
+          echo "=========================================================================="
+          
+          # Start container in detached mode
+          docker run -d --name agent-container -p 8501:8501 -p 5000:5000 bugbounty-cloud-agent
+          
+          # Wait for Streamlit to initialize
+          sleep 10
+          
+          # Install and run Cloudflare Tunnel for secure public URL
+          curl -sL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -o /tmp/cloudflared
+          chmod +x /tmp/cloudflared
+          
+          echo "=========================================================================="
+          echo "🚀 GENERATING SECURE PUBLIC WEB UI URL..."
+          echo "=========================================================================="
+          /tmp/cloudflared tunnel --url http://localhost:8501 > /tmp/tunnel.log 2>&1 &
+          
+          # Wait for tunnel URL
+          sleep 8
+          TUNNEL_URL=$(grep -o 'https://[-0-9a-z]*\.trycloudflare\.com' /tmp/tunnel.log | head -n 1)
+          
+          echo "### 🌐 Web UI Live Link: $TUNNEL_URL" >> $GITHUB_STEP_SUMMARY
+          echo "Click the link above to chat with the model and run scans in the cloud!" >> $GITHUB_STEP_SUMMARY
+          echo ""
+          echo "=========================================================================="
+          echo "🔗 LIVE PUBLIC URL: $TUNNEL_URL"
+          echo "=========================================================================="
+          
+          # Keep runner alive for interactive user session
+          echo "Interactive session running for 4 hours. You can stop it anytime from Actions."
+          sleep 14400
+
+      - name: Execute Automated Target Audit in Cloud
+        if: ${{ github.event.inputs.mode == 'automated_scan' }}
+        run: |
+          TARGET="${{ github.event.inputs.target_url }}"
+          echo "Executing automated security assessment against target: $TARGET"
+          docker run --rm bugbounty-cloud-agent python3 agent/hexstrike_agent_bridge.py "$TARGET" > /tmp/audit_report.md
+          
+          cat /tmp/audit_report.md
+          cat /tmp/audit_report.md >> $GITHUB_STEP_SUMMARY
