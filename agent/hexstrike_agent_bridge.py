@@ -72,7 +72,11 @@ class HexStrikeAgentBridge:
                 self.emit("tool_execution", "status", f"HexStrike API call notice: {e}, falling back to CLI execution.")
 
         # 2. Resilient Direct CLI Fallback
-        cmd = [tool_name] + arguments + [target]
+        cleaned_target = target
+        if tool_name in ["nmap", "masscan", "subfinder"] and (target.startswith("http://") or target.startswith("https://")):
+            cleaned_target = target.split("://")[1].split("/")[0].split(":")[0]
+
+        cmd = [tool_name] + arguments + [cleaned_target]
         start_t = time.time()
         try:
             p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=120)
