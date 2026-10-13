@@ -58,8 +58,8 @@ def fetch_json(url):
 # -------------------------------------------------------------
 # 19. EXPLOIT-DB CATALOG (GitLab Verified Exploits)
 # -------------------------------------------------------------
-def compile_exploitdb(limit=2500):
-    print("[*] [19/50] Compiling Exploit-DB verified archive...")
+def compile_exploitdb(categories=None, limit=2500):
+    print(f"[*] [19/50] Compiling Exploit-DB verified archive (categories={categories})...")
     url = "https://gitlab.com/exploit-database/exploitdb/-/raw/main/files_exploits.csv"
     content = fetch_text(url)
     if not content:
@@ -67,15 +67,23 @@ def compile_exploitdb(limit=2500):
 
     samples = []
     reader = csv.DictReader(io.StringIO(content))
-    for row in reader:
+    rows = list(reader)
+    import random
+    rng = random.Random(42)
+    rng.shuffle(rows)
+
+    for row in rows:
         desc = row.get("description", "").strip()
-        etype = row.get("type", "").strip()
+        etype = row.get("type", "").strip().lower()
         platform = row.get("platform", "").strip()
         cve = row.get("codes", "").strip()
         author = row.get("author", "").strip()
         file_path = row.get("file", "").strip()
 
         if not desc:
+            continue
+
+        if categories and etype not in [c.lower() for c in categories]:
             continue
 
         user_content = (
@@ -303,31 +311,107 @@ def compile_core_threat_advisories():
     print(f"[✓] Core Threat Advisories compiled: {len(samples)} samples!")
     return samples
 
+def load_replay_samples(count=480, seed=5000):
+    replay_file = os.path.join(DATASETS_DIR, "legendary_milestones_curated.jsonl")
+    milestones = []
+    if os.path.exists(replay_file):
+        with open(replay_file, "r", encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    try:
+                        milestones.append(json.loads(line.strip()))
+                    except Exception:
+                        pass
+    import random
+    rng = random.Random(seed)
+    rng.shuffle(milestones)
+    return milestones[:count]
+
 def run_remaining_sources_compilation():
     start_time = time.time()
     print(f"\n{'='*75}")
     print("🏭 [TIER-2 HARVESTER] Compiling Remaining 32 Sources (Completing 50 Elite Sources)")
     print(f"{'='*75}\n")
 
-    tier2_samples = []
-    tier2_samples.extend(compile_exploitdb(limit=3000)) # Exploit-DB top 3,000 verified exploits
-    tier2_samples.extend(compile_project_zero())        # Google Project Zero advisories
-    tier2_samples.extend(compile_owasp_api())           # OWASP API Security Top 10
-    tier2_samples.extend(compile_owasp_llm())           # OWASP LLM / AI Security Top 10
-    tier2_samples.extend(compile_core_threat_advisories()) # Cloud, Kernel, Advisories & CWE Top 25
+    # 1. Compile individual specialized categories
+    web_remote = compile_exploitdb(categories=["webapps", "remote"], limit=2000)
+    local_kernel = compile_exploitdb(categories=["local", "dos"], limit=2000)
+    pz_samples = compile_project_zero()
+    api_samples = compile_owasp_api()
+    llm_samples = compile_owasp_llm()
+    core_advisories = compile_core_threat_advisories()
 
-    print(f"\n[*] Writing {len(tier2_samples)} samples to {TIER2_OUTPUT}...")
+    # Full combined dataset
+    tier2_all = web_remote + local_kernel + pz_samples + api_samples + llm_samples + core_advisories
+    print(f"\n[*] Writing {len(tier2_all)} combined samples to {TIER2_OUTPUT}...")
     with open(TIER2_OUTPUT, "w", encoding="utf-8") as f:
-        for s in tier2_samples:
+        for s in tier2_all:
             f.write(json.dumps(s, ensure_ascii=False) + "\n")
+
+    # 2. Prepare Active Stage 1 Chunk (Account 1: Web, Cloud, Remote RCE, API, LLM)
+    s1_fresh = []
+    s1_fresh.extend(api_samples)
+    s1_fresh.extend(llm_samples)
+    s1_fresh.extend([s for s in core_advisories if any(k in json.dumps(s).lower() for k in ["cloud", "web", "api", "ssrf", "xss", "sql", "csrf", "upload"])])
+    remaining_s1 = 1920 - len(s1_fresh)
+    s1_fresh.extend(web_remote[:remaining_s1])
+
+    s1_replay = load_replay_samples(480, seed=5001)
+    s1_final = s1_fresh[:1920] + s1_replay
+    import random
+    random.Random(42).shuffle(s1_final)
+
+    stage1_chunk_file = os.path.join(DATASETS_DIR, "active_stage1_chunk.jsonl")
+    with open(stage1_chunk_file, "w", encoding="utf-8") as f:
+        for s in s1_final:
+            f.write(json.dumps(s, ensure_ascii=False) + "\n")
+    print(f"[✓] Stage 1 Active Chunk Prepared: {len(s1_final)} samples ({len(s1_fresh[:1920])} fresh Tier-2 + {len(s1_replay)} replay)")
+
+    # 3. Prepare Active Stage 2 Chunk (Account 3: Kernel, Memory, Containers, AD, APTs)
+    s2_fresh = []
+    s2_fresh.extend(pz_samples)
+    s2_fresh.extend([s for s in core_advisories if any(k in json.dumps(s).lower() for k in ["kernel", "container", "active directory", "cwe-787", "cwe-416", "volt typhoon", "svr", "triangulation", "openssl", "binder"])])
+    remaining_s2 = 1920 - len(s2_fresh)
+    s2_fresh.extend(local_kernel[:remaining_s2])
+
+    s2_replay = load_replay_samples(480, seed=5002)
+    s2_final = s2_fresh[:1920] + s2_replay
+    random.Random(84).shuffle(s2_final)
+
+    stage2_chunk_file = os.path.join(DATASETS_DIR, "active_stage2_chunk.jsonl")
+    with open(stage2_chunk_file, "w", encoding="utf-8") as f:
+        for s in s2_final:
+            f.write(json.dumps(s, ensure_ascii=False) + "\n")
+    print(f"[✓] Stage 2 Active Chunk Prepared: {len(s2_final)} samples ({len(s2_fresh[:1920])} fresh Tier-2 + {len(s2_replay)} replay)")
+
+    # 4. Update cursor metadata
+    cursor_file = os.path.join(REPO_DIR, "data_pipeline", "conveyor_cursor.json")
+    cursor = {}
+    if os.path.exists(cursor_file):
+        try:
+            with open(cursor_file, "r") as f:
+                cursor = json.load(f)
+        except Exception:
+            pass
+    cursor["tier2_phase"] = {
+        "status": "PREPARED_FOR_TRAINING",
+        "total_sources_completed": 50,
+        "tier2_sources_count": 32,
+        "stage1_chunk_samples": len(s1_final),
+        "stage2_chunk_samples": len(s2_final),
+        "prepared_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    with open(cursor_file, "w") as f:
+        json.dump(cursor, f, indent=2)
 
     elapsed = time.time() - start_time
     print(f"\n{'='*75}")
     print(f"[✓] TIER-2 COMPILATION COMPLETE IN {elapsed:.2f}s!")
-    print(f"    - Total Compiled Tier-2 Samples: {len(tier2_samples)} samples")
-    print(f"    - Target File: {TIER2_OUTPUT}")
+    print(f"    - Total Compiled Tier-2 Samples: {len(tier2_all)} samples")
+    print(f"    - Stage 1 Active Chunk (Account 1): {len(s1_final)} samples")
+    print(f"    - Stage 2 Active Chunk (Account 3): {len(s2_final)} samples")
     print(f"{'='*75}\n")
-    return len(tier2_samples)
+    return len(tier2_all)
 
 if __name__ == "__main__":
     run_remaining_sources_compilation()

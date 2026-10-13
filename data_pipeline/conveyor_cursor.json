@@ -20,5 +20,13 @@
     "is_completed": true
   },
   "overall_epoch": 4,
-  "last_updated": "2026-10-13T20:27:17Z"
+  "last_updated": "2026-10-13T20:27:17Z",
+  "tier2_phase": {
+    "status": "PREPARED_FOR_TRAINING",
+    "total_sources_completed": 50,
+    "tier2_sources_count": 32,
+    "stage1_chunk_samples": 2400,
+    "stage2_chunk_samples": 2400,
+    "prepared_at": "2026-10-13T23:28:21Z"
+  }
 }
