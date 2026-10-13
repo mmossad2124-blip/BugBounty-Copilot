@@ -257,10 +257,18 @@ def run_full_autonomous_relay():
 
     # 6. Phase C: Post-Training Complex Sandbox Exam (Multi-Round Trial-and-Error)
     print(f"\n{'='*70}")
-    print("[PHASE 6] Post-Training Autonomous Sandbox Exam: Multi-Round Trial-and-Error & Patching...")
+    print("[PHASE 6.1] Post-Training Autonomous Sandbox Exam: Multi-Round Trial-and-Error & Patching...")
     print(f"{'='*70}")
     complex_sandbox = os.path.join(REPO_DIR, "sandbox", "complex_multiround_sandbox.py")
     subprocess.run([sys.executable, complex_sandbox], check=False)
+
+    # 6.2 Autonomous HexStrike Target Assessment in Cloud
+    print(f"\n{'='*70}")
+    print("[PHASE 6.2] Autonomous HexStrike Target Audit on Live Cloud Sandbox...")
+    print(f"{'='*70}")
+    agent_script = os.path.join(REPO_DIR, "agent", "hexstrike_agent_bridge.py")
+    if os.path.exists(agent_script):
+        subprocess.run([sys.executable, agent_script, "http://testphp.vulnweb.com"], check=False)
 
     # 7. Phase D: Advance Industrial Conveyor Offset for Next Run
     step7_advance_conveyor_cursor()
