@@ -4,8 +4,8 @@
     "chunk_size": 2400,
     "replay_size": 480,
     "new_samples_per_chunk": 1920,
-    "current_offset": 11520,
-    "completed_cycles": 6,
+    "current_offset": 13440,
+    "completed_cycles": 7,
     "total_cycles_needed": 11,
     "is_completed": false
   },
@@ -14,11 +14,11 @@
     "chunk_size": 2400,
     "replay_size": 480,
     "new_samples_per_chunk": 1920,
-    "current_offset": 5498,
-    "completed_cycles": 6,
+    "current_offset": 1396,
+    "completed_cycles": 7,
     "total_cycles_needed": 4,
     "is_completed": true
   },
   "overall_epoch": 1,
-  "last_updated": "2026-10-13T06:25:35Z"
+  "last_updated": "2026-10-13T08:09:36Z"
 }
