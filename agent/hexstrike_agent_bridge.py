@@ -14,7 +14,7 @@ import requests
 import re
 from typing import Dict, List, Any, Callable, Optional
 
-HEXSTRIKE_API_BASE = os.environ.get("HEXSTRIKE_API_BASE", "http://127.0.0.1:5000")
+HEXSTRIKE_API_BASE = os.environ.get("HEXSTRIKE_API_BASE", "http://127.0.0.1:5055")
 
 class HexStrikeAgentBridge:
     def __init__(self, callback: Optional[Callable[[str, str, Any], None]] = None):

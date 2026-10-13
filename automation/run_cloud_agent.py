@@ -30,7 +30,7 @@ def start_hexstrike_cloud_agent():
     run_cmd = [
         "docker", "run", "-d",
         "--name", "agent-sandbox-instance",
-        "-p", "8501:8501", "-p", "5000:5000",
+        "-p", "8501:8501", "-p", "5055:5055",
         "bugbounty-cloud-agent"
     ]
     subprocess.run(run_cmd, check=True)
