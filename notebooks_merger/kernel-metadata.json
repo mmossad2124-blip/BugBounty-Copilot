@@ -1,0 +1,16 @@
+{
+  "id": "mmossad2124/mossad-pentast-ai-merger",
+  "title": "Mossad Pentast AI Merger",
+  "code_file": "Mossad_Pentast_AI_Merger.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [
+    "mmossad2324/bugbounty-copilot-trainer",
+    "mmossad2124/bugbounty-copilot-trainer"
+  ]
+}
