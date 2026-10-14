@@ -241,12 +241,11 @@ def step7_advance_conveyor_cursor():
         print(f"[!] Git sync note: {e}")
 
 def run_full_autonomous_relay():
-    print(f"\n{'#'*75}")
-    print("# 🚀 INITIATING 24/7 AUTONOMOUS BUG BOUNTY RELAY & TRAINING DAEMON")
-    print(f"{'#'*75}")
-
-    # 0. Prepare Next Conveyor Chunks with Replay Buffer
-    step0_prepare_conveyor_chunks()
+    print("\n" + "="*75)
+    print("⛔ [SAFETY LOCK] AUTONOMOUS RELAY IS PERMANENTLY DISABLED BY USER ORDER.")
+    print("⛔ All training loops, Kaggle triggers, and auto-dispatches are frozen.")
+    print("="*75 + "\n")
+    return
 
     # 1. Scrape & Distill fresh CVEs
     step1_harvest_internet_data()
