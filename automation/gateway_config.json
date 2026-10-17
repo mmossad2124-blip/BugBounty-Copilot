@@ -1,5 +1,5 @@
 {
-  "kaggle_url": "https://plates-longitude-bennett-care.trycloudflare.com/v1",
+  "kaggle_url": null,
   "fallback_url": "https://mmossad2124-mossad-pentast-ai.hf.space/v1",
   "api_key": "sk-mossad-pentast-2026",
   "timeout_seconds": 180

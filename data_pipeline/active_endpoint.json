@@ -1,6 +1,6 @@
 {
-  "url": "https://plates-longitude-bennett-care.trycloudflare.com/v1",
-  "status": "ONLINE",
+  "url": null,
+  "status": "STANDBY",
   "model": "Mossad-pentast-ai",
-  "timestamp": 1792010955.9419692
+  "timestamp": 0
 }
