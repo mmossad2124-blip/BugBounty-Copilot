@@ -2,11 +2,12 @@ import os
 import sys
 import time
 import json
+import requests
 import streamlit as st
 
 # Configure Page
 st.set_page_config(
-    page_title="BugBounty-Copilot | Autonomous Cyber AI",
+    page_title="Mossad-pentast-ai | Autonomous Cyber Copilot",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -82,10 +83,36 @@ try:
 except ImportError:
     HexStrikeAgentBridge = None
 
+GATEWAY_URL = "http://127.0.0.1:8080/v1"
+
+def check_gateway():
+    try:
+        r = requests.get("http://127.0.0.1:8080/health", timeout=2)
+        if r.status_code == 200:
+            return r.json()
+    except Exception:
+        pass
+    return None
+
+def query_brain_chat(messages, max_tokens=1024):
+    try:
+        payload = {
+            "model": "Mossad-pentast-ai",
+            "messages": messages,
+            "temperature": 0.3,
+            "max_tokens": max_tokens
+        }
+        r = requests.post(f"{GATEWAY_URL}/chat/completions", json=payload, timeout=180)
+        if r.status_code == 200:
+            return r.json().get("choices", [{}])[0].get("message", {}).get("content", "")
+    except Exception as e:
+        return f"[!] خطأ في الاتصال بالبوابة: {e}. تأكد من تشغيل ./start_session.sh"
+    return "[!] لم يتم استلام رد من النموذج."
+
 # Initialize Session State
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "أهلاً بك يا بطل! أنا **BugBounty-Copilot**، مساعدك السيبراني النخبوي المدرب بأوزان الـ 50 مصدراً استخباراتياً. اسألني بالعامية أو الفصحى، أو اختر هدفاً مصرحاً به لنبدأ الفحص والاختراق الذاتي في السحابة فوراً!"}
+        {"role": "assistant", "content": "أهلاً بك! أنا **Mossad-pentast-ai**، مساعدك السيبراني المستقل المدرب بـ 50 مصدراً استخباراتياً والمدمج كنموذج مستقل كامل. يمكنك توجيه الأسئلة لي في وضع الشات، أو إدخال هدف لفحصه فحصاً حقيقياً بالأدوات الحية (Nmap, HTTP Probes, Reflection Probes) في وضع الفحص الميداني!"}
     ]
 
 if "assessment_logs" not in st.session_state:
@@ -95,21 +122,25 @@ if "latest_report" not in st.session_state:
     st.session_state.latest_report = None
 
 # Sidebar Controls
+gw_info = check_gateway()
 with st.sidebar:
-    st.markdown("### ⚙️ لوحة التحكم والإعدادات")
-    st.markdown('<div class="status-badge-live">● السحابة متصلة (HexStrike Active)</div>', unsafe_allow_html=True)
+    st.markdown("### ⚙️ قمرة التحكم بالمنظومة")
+    if gw_info:
+        st.markdown(f'<div class="status-badge-live">● البوابة متصلة ({gw_info.get("active_brain", "Online")})</div>', unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ البوابة غير متصلة (شغّل ./start_session.sh)")
+        
     st.write("")
+    st.markdown("---")
+    mode = st.radio("وضع التشغيل (Operation Mode):", ["🚀 فحص واختراق حقيقي لهدف (Autonomous Audit)", "💬 محادثة مباشرة مع النموذج (Chat)"])
     
     st.markdown("---")
-    mode = st.radio("وضع التشغيل (Operation Mode):", ["💬 محادثة واستشارات ذكية (Chat)", "🚀 فحص واختراق ذاتي لهدف (Autonomous Audit)"])
-    
-    st.markdown("---")
-    st.markdown("#### 📊 إحصائيات النموذج (Brain Metrics):")
-    st.write("• **العينات المدربة**: `30,060+ عينة`")
-    st.write("• **المصادر المغطاة**: `50 مصدراً استخباراتياً`")
-    st.write("• **أدوات HexStrike**: `150+ أداة نشطة`")
-    st.write("• **البيئة**: `Ubuntu 22.04 Docker Sandbox`")
-    st.write("• **الدورات المنجزة**: `Epoch 4 (13 دورة)`")
+    st.markdown("#### 📊 مواصفات النموذج والبيئة:")
+    st.write("• **الاسم**: `Mossad-pentast-ai`")
+    st.write("• **البنية**: `Standalone Float16 Merged`")
+    st.write("• **المصادر**: `50 مصدراً استخباراتياً (30,000+ عينة)`")
+    st.write("• **الأدوات النشطة**: `Nmap, Curl, Python Probes, HexStrike`")
+    st.write("• **البوابة المحلية**: `http://127.0.0.1:8080/v1`")
     
     st.markdown("---")
     if st.button("🗑️ مسح سجل المحادثة (Clear Chat)"):
@@ -119,133 +150,83 @@ with st.sidebar:
         st.rerun()
 
 # Main Header
-st.markdown('<div class="cyber-title">🛡️ BugBounty-Copilot & HexStrike AI</div>', unsafe_allow_html=True)
-st.markdown('<div class="cyber-subtitle">Autonomous Offensive Security & Bug Bounty Copilot • 100% Cloud-Powered</div>', unsafe_allow_html=True)
+st.markdown('<div class="cyber-title">🛡️ Mossad-pentast-ai Autonomous Copilot</div>', unsafe_allow_html=True)
+st.markdown('<div class="cyber-subtitle">Real-World Offensive Security Agent • Live Tool Probing & Neural Threat Reasoning</div>', unsafe_allow_html=True)
 
-# TAB 1: Chat Mode
-if mode == "💬 محادثة واستشارات ذكية (Chat)":
-    # Display Chat History
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
+# TAB 1: Autonomous Target Audit Mode (Default)
+if mode == "🚀 فحص واختراق حقيقي لهدف (Autonomous Audit)":
+    st.markdown("### 🎯 إطلاق الفحص الميداني الحقيقي (Live Target Assessment)")
+    st.info("أدخل رابط الهدف المصرح به قانونياً. سيقوم العميل بتنفيذ فحص فعلي عبر Nmap و HTTP Probes وتحليل استجابات الخادم الحقيقية وربطها بذكاء Mossad-pentast-ai.")
 
-    # Chat Input
-    if user_prompt := st.chat_input("اكتب رسالتك أو سؤالك بالعامية هنا... (مثلاً: إزاي أفحص ثغرة SQLi أو IDOR؟)"):
-        # Add user message
-        st.session_state.chat_history.append({"role": "user", "content": user_prompt})
-        with st.chat_message("user"):
-            st.markdown(user_prompt)
+    target_options = [
+        "http://scanme.nmap.org (هدف مصرح به رسمياً لفحص المنافذ والخدمات)",
+        "http://127.0.0.1:5000 (بيئة فحص محلية معزولة)",
+        "رابط مخصص آخر (Custom URL)"
+    ]
+    selected_target = st.selectbox("اختر هدفاً مصرحاً به:", target_options)
+    
+    if "Custom" in selected_target:
+        target_url = st.text_input("أدخل الرابط المخصص:", "http://scanme.nmap.org")
+    elif "scanme.nmap.org" in selected_target:
+        target_url = "http://scanme.nmap.org"
+    else:
+        target_url = "http://127.0.0.1:5000"
 
-        # Generate Assistant Response
-        with st.chat_message("assistant"):
-            with st.spinner("جاري التفكير وتحليل السيناريو بالـ Chain-of-Thought..."):
-                time.sleep(1) # Smooth pacing
-                
-                # Intelligent security advisor prompt handling
-                response_text = ""
-                p_lower = user_prompt.lower()
-                
-                if any(w in p_lower for w in ["sqli", "sql", "حقن", "قاعدة بيانات"]):
-                    response_text = """### 🎯 خطة فحص واصطياد ثغرات الـ SQL Injection:
-
-أهلاً بك! لفحص الـ SQL Injection باحترافية وبدون ما تتكشف، اتبع الخطوات التكتيكية التالية:
-
-1. **الاستطلاع وتحديد الحقول (`Input Discovery`)**:
-   - ركز على المعاملات الرقمية والبحث: `id=`, `cat=`, `q=`, `search=`.
-   - افحص الـ Headers الحساسة: `User-Agent`, `X-Forwarded-For`, `Cookie`.
-
-2. **التجربة الأولية للكشف عن الأخطاء (`Error-Based & Boolean Probe`)**:
-   - جرب الـ Single Quote: `'` أو `"` وانظر هل يعود خطأ `500 Internal Server Error` أو `SQL syntax`.
-   - جرب الشرط المنطقي: `' OR 1=1 --` مقارنة بـ `' AND 1=2 --`.
-
-3. **تجاوز جدران الحماية (`WAF Evasion Tradecraft`)**:
-   - إذا واجهت `403 Forbidden`، استخدم تقنيات التمويه:
-     - `UN/**/ION SE/**/LECT`
-     - الـ URL-Encoding المزدوج: `%2527%2520OR%25201%253D1`
-     - التعليقات البديلة: `#` أو `;%00`
-
-4. **الأدوات الموصى بها في HexStrike**:
-   - للتحقق السريع: `sqlmap -u "TARGET" --batch --random-agent --level=2`
-   - قوالب Nuclei المخصصة: `nuclei -t http/vulnerabilities/generic/sql-injection.yaml`
-
-هل تريد تطبيق هذا الفحص تلقائياً على هدف مصرح به الآن؟ اختر وضع "فحص واختراق ذاتي" من القائمة الجانبية!"""
-
-                elif any(w in p_lower for w in ["idor", "صلاحيات", "privesc", "api"]):
-                    response_text = """### 🛡️ خطة اصطياد ثغرات الـ IDOR & Privilege Escalation في الـ APIs:
-
-ثغرات الـ IDOR هي منجم ذهب في برامج مكافآت الثغرات! إليك كيفية اكتشافها:
-
-1. **اكتشاف المعرفات المكشوفة (`Object References`)**:
-   - راقب الطلبات في الـ API: `/api/v1/user/1052/profile` أو `/api/orders?order_id=9821`.
-2. **اختبار التبديل (`Horizontal Privilege Escalation`)**:
-   - قم بإنشاء حسابين تجريبيين (User A و User B).
-   - حاول جلب بيانات User B باستخدام الـ Session Token الخاص بـ User A.
-3. **اختبار تصعيد الصلاحيات للأدمن (`Vertical Privilege Escalation`)**:
-   - جرب استدعاء دوال الـ Admin من حساب مستخدم عادي (مثل `/api/admin/users`).
-   - جرب تغيير الـ HTTP Method من `GET` إلى `POST` أو `PUT` أو `DELETE`.
-
-هل لديك نقطة نهاية (Endpoint) معينة تريد تحليلها الآن؟"""
-
-                else:
-                    response_text = f"""### ⚡ استجابة BugBounty-Copilot:
-
-فهمت سؤالك بدقة! بفضل تدريبي على سيناريوهات الـ Red Team والـ 50 مصدراً استخباراتياً:
-
-- **التحليل الفني**: سؤالك يدخل في إطار تحليل الثغرات والمنهجية الأمنية المتقدمة.
-- **التوصية المباشرة**:
-  1. قم برسم خريطة الهدف بدقة أولاً (Reconnaissance).
-  2. ابحث عن نقاط الإدخال غير المحمية (Untrusted Inputs).
-  3. اختبر الاستجابة بعدة أشكال (Payload Mutations) لتجاوز آليات الفلترة.
-
-إذا كان لديك رابط أو هدف ترغب في أن أقوم بفحصه واستخراج ثغراته باستخدام أدوات HexStrike AI مباشرة، فقط انتقل إلى وضع **"فحص واختراق ذاتي لهدف"** وسأنطلق فوراً!"""
-
-                st.markdown(response_text)
-                st.session_state.chat_history.append({"role": "assistant", "content": response_text})
-
-# TAB 2: Autonomous Target Audit Mode
-else:
-    st.markdown("### 🚀 إطلاق الفحص الميداني الذاتي (Autonomous Target Assessment)")
-    st.info("أدخل رابط الموقع أو الهدف المصرح به، وسيقوم العميل بالدخول واستخدام أدوات HexStrike AI لفحص الثغرات وإعداد التقرير تلقائياً.")
-
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        target_url = st.text_input("🎯 عنوان الهدف (Target Scope URL / Domain):", "http://testphp.vulnweb.com")
-    with col2:
-        audit_depth = st.selectbox("عمق الفحص (Scan Depth):", ["سريع وذكي (Rapid Heuristic)", "شامل وعميق (Full In-Depth)"])
-
-    if st.button("⚡ بدء الفحص الذاتي الآن (Launch Assessment)"):
+    if st.button("⚡ بدء الفحص الحقيقي الآن (Launch Real Audit)"):
         if not target_url:
             st.error("يرجى إدخال عنوان الهدف أولاً!")
         else:
-            status_container = st.status("🚀 جاري تهيئة العميل وتشغيل أدوات HexStrike في السحابة...", expanded=True)
+            status_box = st.status("🚀 جاري بدء الفحص الميداني بأدوات حقيقية...", expanded=True)
             
-            with status_container:
-                st.write(f"• **الهدف المحدد**: `{target_url}`")
-                st.write("• **المرحلة 1**: جاري الاستطلاع ومسح المنافذ عبر Nmap و Httpx...")
-                time.sleep(2)
-                st.write("• **المرحلة 2**: جاري تشغيل قوالب Nuclei وفحص الـ CVEs وثغرات الويب...")
-                time.sleep(2)
-                st.write("• **المرحلة 3**: تم رصد ثغرات محتملة، جاري تجربة التجاوز والتحقق (PoC Verification)...")
-                time.sleep(2)
+            with status_box:
+                st.write(f"📡 **الهدف الجاري فحصه**: `{target_url}`")
+                st.write("🔍 **المرحلة 1**: تشغيل Nmap بفحص المنافذ والخدمات الفعلية (-Pn -sV)...")
+                
+                log_placeholder = st.empty()
+                logs = []
+                def on_event(phase, ev_type, data):
+                    logs.append(f"[{phase.upper()}] {data}")
+                    log_placeholder.code("\n".join(logs[-8:]), language="text")
 
-                # Run Agent Bridge
                 if HexStrikeAgentBridge:
-                    agent = HexStrikeAgentBridge()
+                    agent = HexStrikeAgentBridge(callback=on_event)
                     result = agent.run_full_assessment(target_url)
                     st.session_state.latest_report = result.get("report_markdown")
                 else:
-                    st.session_state.latest_report = f"# 🛡️ تقرير فحص تجريبي للهدف: {target_url}\n- تم العثور على منافذ مفتوحة وثغرات محتملة."
+                    st.error("HexStrikeAgentBridge not found!")
 
-                status_container.update(label="✅ اكتمل الفحص الأمني الذاتي بنجاح!", state="complete", expanded=False)
+                status_box.update(label="✅ اكتمل الفحص الأمني الحقيقي والتحليل بنجاح!", state="complete", expanded=False)
 
     # Display Report if available
     if st.session_state.latest_report:
         st.markdown("---")
-        st.markdown("### 📋 التقرير الأمني الصادر من العميل:")
+        st.markdown("### 📋 التقرير الفني الحقيقي الصادر من العميل:")
         st.markdown(st.session_state.latest_report)
         st.download_button(
             label="📥 تحميل التقرير الكامل بصيغة Markdown",
             data=st.session_state.latest_report,
-            file_name=f"security_audit_report_{int(time.time())}.md",
+            file_name=f"mossad_audit_report_{int(time.time())}.md",
             mime="text/markdown"
         )
+
+# TAB 2: Chat Mode
+else:
+    st.markdown("### 💬 الدردشة والاستشارة الأمنية المباشرة")
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    if user_prompt := st.chat_input("اكتب سؤالك الأمني أو التكتيكي هنا..."):
+        st.session_state.chat_history.append({"role": "user", "content": user_prompt})
+        with st.chat_message("user"):
+            st.markdown(user_prompt)
+
+        with st.chat_message("assistant"):
+            with st.spinner("جاري استشارة عقل Mossad-pentast-ai عبر البوابة..."):
+                messages = [
+                    {"role": "system", "content": "You are Mossad-pentast-ai, an Elite Offensive Security & Bug Bounty AI Copilot. You provide expert, deeply technical, and structured red-team & penetration testing guidance."},
+                    {"role": "user", "content": user_prompt}
+                ]
+                reply = query_brain_chat(messages)
+                st.markdown(reply)
+                st.session_state.chat_history.append({"role": "assistant", "content": reply})
