@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Mossad-Pentast-AI Exclusive Brain Gateway & Cloud Linux Execution Proxy
+Mossad-Pentast-AI Exclusive Brain Gateway, Smart Context Compactor & Cloud Linux Proxy
 Listens on http://0.0.0.0:8080/v1 (accessible by Host, Docker OpenHands, and CLI)
 STRICT POLICY: ONLY routes to our own fine-tuned model (Mossad-pentast-ai).
 Never uses external/third-party models.
 
-Routing Hierarchy:
-  1. Primary (Fast GPU + 10Gbps Cloud Linux VM): Active Kaggle GPU Server running Mossad-pentast-ai
-     (auto-discovered via data_pipeline/active_endpoint.json or gateway_config.json)
-  2. Secondary Fallback (Slower CPU/Space): Same trained model (Mossad-pentast-ai)
-     hosted on Hugging Face Space / Secondary CPU Node.
+Enhancements v4.0:
+  1. Smart HTML/JS & Tool Observation Compactor (prevents 30KB curl dumps from causing CUDA OOM HTTP 500 on T4 GPU)
+  2. HexStrike AI v6.0 (150+ Tools) + Custom Scripting integration on 10Gbps Cloud Linux VM
+  3. Zero-Chinese Guard (prevents Qwen base-model CJK language drift on English terminal errors)
+  4. Automatic XML/Bash tool call normalization (<command> / ```bash -> <parameter=command>)
 """
 
 import json
 import os
-import subprocess
+import re
 import sys
 import threading
 import time
@@ -47,7 +47,6 @@ def load_config():
     else:
         cfg = default_config
 
-    # Auto-detect from active_endpoint.json if updated recently
     if os.path.exists(ENDPOINT_FILE):
         try:
             with open(ENDPOINT_FILE, "r", encoding="utf-8") as ef:
@@ -90,10 +89,73 @@ def log_chat_turn(user_msg: str, assistant_msg: str, backend_name: str):
         print(f"[!] History log error: {e}")
 
 
+def summarize_large_output(text: str, max_chars: int = 2400) -> str:
+    """Extract security-relevant intelligence from huge HTML/JS or tool outputs to protect GPU VRAM."""
+    if not text or len(text) <= max_chars:
+        return text
+
+    # Check if it looks like raw HTML/JS from curl
+    lower = text.lower()
+    if "<html" in lower or "<!doctype" in lower or "<script" in lower or "document.getelementbyid" in lower:
+        titles = re.findall(r"<title[^>]*>(.*?)</title>", text, flags=re.IGNORECASE | re.DOTALL)
+        forms = re.findall(r"<form[^>]*>.*?</form>", text, flags=re.IGNORECASE | re.DOTALL)
+        inputs = re.findall(r"<input[^>]*>", text, flags=re.IGNORECASE)
+        scripts = re.findall(r"<script[^>]+src=[\"']([^\"']+)[\"']", text, flags=re.IGNORECASE)
+        links = re.findall(r"href=[\"']([^\"']+)[\"']", text, flags=re.IGNORECASE)
+        apis = re.findall(r"https?://[^\s\"'<>]+|/api/[^\s\"'<>]+", text)
+
+        summary_parts = [
+            f"[⚡ Smart Security Extractor: تم تلخيص صفحة الويب (الحجم الأصلي {len(text)} حرف) لحماية ذاكرة GPU واستخراج الزبدة الأمنية]:",
+            f"- عنوان الصفحة (Title): {titles[0].strip() if titles else 'N/A'}",
+            f"- النماذج (Forms المكتشفة: {len(forms)}): {forms[:3]}",
+            f"- حقول الإدخال (Inputs المكتشفة: {len(inputs)}): {inputs[:10]}",
+            f"- ملفات السكربت (Scripts المكتشفة: {len(scripts)}): {scripts[:10]}",
+            f"- الروابط والمسارات (Links/Endpoints): {list(dict.fromkeys(links + apis))[:20]}",
+            f"- مقتطف من بداية الاستجابة:\n{text[:700]}",
+        ]
+        res = "\n".join(summary_parts)
+        return res[:max_chars]
+
+    # General large command output truncation
+    half = max_chars // 2 - 100
+    return (
+        text[:half]
+        + f"\n\n... [⚡ تم اختصار {len(text) - max_chars} حرف لحماية ذاكرة GPU] ...\n\n"
+        + text[-half:]
+    )
+
+
+def clean_chinese_drift(text: str) -> str:
+    """Eliminate any Chinese (CJK) language drift while preserving Arabic/English technical content."""
+    if not text:
+        return text
+    replacements = {
+        "看来": "يبدو أن ",
+        "看起来": "يبدو أن ",
+        "不支持": " لا يدعم ",
+        "选项": " الخيار ",
+        "让我们尝试另一种方法来格式化输出": "لنجرب طريقة أخرى لتنسيق المخرجات",
+        "请求响应不是有效的": "استجابة الطلب ليست بصيغة صالحة ",
+        "让我们改用": "سأنتقل لاستخدام ",
+        "来分析页面": " لتحليل الصفحة",
+        "服务器上没有安装": "الأداة غير مثبتة، سأقوم بتثبيتها أو استخدام بديل ",
+        "来获取一些基本信息": " لجلب المعلومات الأساسية",
+        "：": ":",
+        "。": ". ",
+        "，": "، ",
+    }
+    for k, v in replacements.items():
+        text = text.replace(k, v)
+    # Remove any remaining CJK characters
+    text = re.sub(r"[\u4e00-\u9fff]+", " ", text)
+    text = re.sub(r"  +", " ", text)
+    return text.strip()
+
+
 def refresh_kaggle_url_from_github(cfg):
     try:
         gh_raw = f"https://raw.githubusercontent.com/mmossad2124-blip/BugBounty-Copilot/main/data_pipeline/active_endpoint.json?t={int(time.time())}"
-        req_gh = urllib.request.Request(gh_raw, headers={"User-Agent": "BrainGateway/3.2", "Cache-Control": "no-cache"})
+        req_gh = urllib.request.Request(gh_raw, headers={"User-Agent": "BrainGateway/4.0", "Cache-Control": "no-cache"})
         with urllib.request.urlopen(req_gh, timeout=5) as g_resp:
             g_data = json.loads(g_resp.read().decode("utf-8"))
             if g_data.get("url") and "trycloudflare.com" in g_data["url"] and g_data.get("status") == "ONLINE":
@@ -127,9 +189,9 @@ class GatewayHandler(BaseHTTPRequestHandler):
         if path in ["/", "/health", "/v1/health"]:
             status_data = {
                 "status": "online",
-                "model": "Mossad-pentast-ai (Exclusive Trained Weights)",
+                "model": "Mossad-pentast-ai (Exclusive Trained Weights + HexStrike AI v6.0)",
                 "active_brain": "Kaggle GPU (Primary)" if cfg.get("kaggle_url") else "HuggingFace Fallback (Secondary)",
-                "cloud_linux_vm": "ONLINE (10Gbps)" if cfg.get("kaggle_url") else "STANDBY",
+                "cloud_linux_vm": "ONLINE (10Gbps + HexStrike 150 Tools)" if cfg.get("kaggle_url") else "STANDBY",
                 "kaggle_url": cfg.get("kaggle_url"),
                 "fallback_url": cfg.get("fallback_url"),
             }
@@ -189,7 +251,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
         self._send_json(404, {"error": f"Endpoint {path} not recognized by Gateway"})
 
     def _handle_cloud_execute(self, body_bytes, cfg):
-        """Forward bash commands to the 10Gbps Cloud Linux VM on Kaggle."""
+        """Forward bash commands to the 10Gbps Cloud Linux VM on Kaggle with smart output extraction."""
         try:
             req_json = json.loads(body_bytes.decode("utf-8"))
         except Exception:
@@ -205,22 +267,29 @@ class GatewayHandler(BaseHTTPRequestHandler):
             exec_url = f"{base_root}/execute"
             try:
                 cmd_str = req_json.get("command", "")
-                # Auto-sanitize nmap URLs if model passed https://domain/path to nmap
                 if "nmap " in cmd_str:
-                    import re
                     cmd_str = re.sub(r"https?://([^/\s\"']+)(/[^\s\"']*)?", r"\1", cmd_str)
-                    cmd_str = cmd_str.replace(" -p- ", " -F ").replace("--trace-http-request-methods", "").replace("--trace-http-requests", "").replace("--trace-http-responses", "")
+                    cmd_str = (
+                        cmd_str.replace(" -p- ", " -F ")
+                        .replace("--trace-http-request-methods", "")
+                        .replace("--trace-http-requests", "")
+                        .replace("--trace-http-responses", "")
+                    )
                     req_json["command"] = cmd_str
-                print(f"[☁️ CLOUD EXEC] Forwarding command to Cloud Linux VM (10Gbps): {cmd_str[:80]}...")
+                print(f"[☁️ CLOUD EXEC] Forwarding command to Cloud Linux VM (10Gbps): {cmd_str[:90]}...")
                 req = urllib.request.Request(
                     exec_url,
                     data=json.dumps(req_json).encode("utf-8"),
-                    headers={"Content-Type": "application/json", "User-Agent": "MossadBrainGateway/3.3"},
+                    headers={"Content-Type": "application/json", "User-Agent": "MossadBrainGateway/4.0"},
                     method="POST",
                 )
                 timeout_s = int(req_json.get("timeout", 120)) + 15
                 with urllib.request.urlopen(req, timeout=timeout_s) as resp:
                     resp_obj = json.loads(resp.read().decode("utf-8"))
+                    if "stdout" in resp_obj and isinstance(resp_obj["stdout"], str):
+                        resp_obj["stdout"] = summarize_large_output(resp_obj["stdout"], max_chars=2600)
+                    if "stderr" in resp_obj and isinstance(resp_obj["stderr"], str):
+                        resp_obj["stderr"] = summarize_large_output(resp_obj["stderr"], max_chars=1200)
                     self._send_json(200, resp_obj)
                     return
             except Exception as e:
@@ -237,7 +306,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
         is_stream = bool(req_json.get("stream", False))
         last_user_text = ""
 
-        # Flatten list-type content blocks if sent by OpenHands/LiteLLM
+        # Flatten and compact messages to prevent GPU OOM and Chinese drift
         if "messages" in req_json and isinstance(req_json["messages"], list):
             clean_msgs = []
             for m in req_json["messages"]:
@@ -254,15 +323,50 @@ class GatewayHandler(BaseHTTPRequestHandler):
                 content_str = str(content)
                 if role == "user":
                     last_user_text = content_str
+                    # Summarize huge tool outputs before sending to GPU
+                    if len(content_str) > 2400:
+                        content_str = summarize_large_output(content_str, max_chars=2400)
+                    if "EXECUTION RESULT of [" in content_str:
+                        content_str += (
+                            "\n\n[توجيه هام لـ Mossad-pentast-ai: حلل النتيجة أعلاه باللغة العربية الفصحى فقط. "
+                            "لديك 150+ أداة عبر `hexstrike` (مثل `hexstrike analyze <target>` أو `hexstrike smart-scan <target>`) "
+                            "وأدوات اللينكس (`whatweb`, `wafw00f`, `nmap`, `gobuster`, `ffuf`, `sqlmap`, `nikto`, `curl`, `python3`). "
+                            "إذا احتجت خطوة فحص إضافية نفذها بـ `<function=execute_bash><parameter=command>...</parameter></function>`، "
+                            "وإذا اكتملت لديك النتائج اكتب تقريراً أمنياً مفصلاً باللغة العربية بدون أي وسم `<function=...>`]."
+                        )
+                elif role == "assistant":
+                    content_str = clean_chinese_drift(content_str)
+                    if len(content_str) > 1500:
+                        content_str = content_str[:1500]
                 clean_msgs.append({"role": role, "content": content_str})
+
+            # Sliding context window + strict 6000-char budget so token count NEVER exceeds Unsloth max_seq_length=4096
+            if len(clean_msgs) > 7:
+                sys_msgs = [m for m in clean_msgs[:1] if m["role"] == "system"]
+                first_user = [m for m in clean_msgs[:3] if m["role"] == "user"][:1]
+                recent = clean_msgs[-4:]
+                clean_msgs = sys_msgs + first_user + recent
+
+            MAX_TOTAL_CHARS = 5800
+            total_chars = sum(len(m["content"]) for m in clean_msgs)
+            while total_chars > MAX_TOTAL_CHARS and len(clean_msgs) > 2:
+                # Drop oldest middle message or truncate largest message
+                if len(clean_msgs) > 3:
+                    clean_msgs.pop(1)
+                else:
+                    for m in clean_msgs:
+                        if len(m["content"]) > 1800:
+                            m["content"] = summarize_large_output(m["content"], max_chars=1600)
+                    break
+                total_chars = sum(len(m["content"]) for m in clean_msgs)
+
             req_json["messages"] = clean_msgs
 
-        # Always force stream=False to backend and convert to SSE if client requested stream=True
         backend_req = dict(req_json)
         backend_req["stream"] = False
+        backend_req["max_tokens"] = min(int(backend_req.get("max_tokens", 512) or 512), 512)
         backend_bytes = json.dumps(backend_req).encode("utf-8")
 
-        # Refresh Kaggle URL from GitHub if not set
         if not cfg.get("kaggle_url"):
             cfg = refresh_kaggle_url_from_github(cfg)
 
@@ -286,7 +390,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {cfg.get('api_key', 'sk-mossad-pentast-2026')}",
-                        "User-Agent": "MossadBrainGateway/3.2",
+                        "User-Agent": "MossadBrainGateway/4.0",
                     },
                     method="POST",
                 )
@@ -314,7 +418,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                                 headers={
                                     "Content-Type": "application/json",
                                     "Authorization": f"Bearer {cfg.get('api_key', 'sk-mossad-pentast-2026')}",
-                                    "User-Agent": "MossadBrainGateway/3.2",
+                                    "User-Agent": "MossadBrainGateway/4.0",
                                 },
                                 method="POST",
                             )
@@ -339,10 +443,9 @@ class GatewayHandler(BaseHTTPRequestHandler):
 
     def _send_openai_response(self, openai_resp: dict, is_stream: bool, last_user_text: str = ""):
         try:
-            import re
             c = openai_resp["choices"][0]["message"].get("content", "")
             if c:
-                # 1. If model used <function=execute_bash> with <command> or <parameter>command> or raw text
+                c = clean_chinese_drift(c)
                 if "<function=" in c:
                     c = re.sub(r"<command>(.*?)</command>", r"<parameter=command>\1</parameter>", c, flags=re.DOTALL)
                     c = re.sub(r"<parameter>\s*command\s*>(.*?)</parameter>", r"<parameter=command>\1</parameter>", c, flags=re.DOTALL)
@@ -352,7 +455,6 @@ class GatewayHandler(BaseHTTPRequestHandler):
                             inner = re.sub(r"</?[^>]+>", "", m.group(1)).strip()
                             return f"<function=execute_bash>\n<parameter=command>{inner}</parameter>\n</function>"
                         c = re.sub(r"<function=execute_bash>(.*?)(?:</function>|$)", _wrap_raw_bash, c, flags=re.DOTALL)
-                # 2. If model wrote ```bash ... ``` blocks instead of <function=execute_bash> (and last message wasn't already a tool output)
                 elif "```" in c and "EXECUTION RESULT of [" not in last_user_text:
                     bash_blocks = re.findall(r"```(?:bash|sh|shell|zsh)?\s*\n(.*?)```", c, flags=re.DOTALL)
                     cmds = []
@@ -368,6 +470,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                 openai_resp["choices"][0]["message"]["content"] = c
         except Exception as e:
             print(f"[!] Normalization warning: {e}")
+
         if not is_stream:
             self._send_json(200, openai_resp)
             return
@@ -438,9 +541,9 @@ def run_server(port=8080):
     watcher.start()
     server = ThreadingHTTPServer(("0.0.0.0", port), GatewayHandler)
     print(f"\n{'='*70}")
-    print(f"🚀 [MOSSAD BRAIN GATEWAY - EXCLUSIVE] Listening on http://0.0.0.0:{port}/v1")
-    print(f"🔗 1. Primary: Kaggle GPU (Mossad-pentast-ai) | 2. Fallback: Hugging Face (Mossad-pentast-ai)")
-    print(f"☁️  Cloud Linux Execution Proxy enabled at http://0.0.0.0:{port}/execute")
+    print(f"🚀 [MOSSAD BRAIN GATEWAY v4.0 - HEXSTRIKE + EXCLUSIVE MODEL] Port {port}")
+    print(f"🔗 1. Primary: Kaggle GPU (Mossad-pentast-ai) | 2. Fallback: Hugging Face")
+    print(f"☁️  Cloud Linux 10Gbps + HexStrike AI 150 Tools Proxy at /execute")
     print(f"{'='*70}\n")
     sys.stdout.flush()
     server.serve_forever()
