@@ -205,11 +205,17 @@ class GatewayHandler(BaseHTTPRequestHandler):
             exec_url = f"{base_root}/execute"
             try:
                 cmd_str = req_json.get("command", "")
+                # Auto-sanitize nmap URLs if model passed https://domain/path to nmap
+                if "nmap " in cmd_str:
+                    import re
+                    cmd_str = re.sub(r"https?://([^/\s\"']+)(/[^\s\"']*)?", r"\1", cmd_str)
+                    cmd_str = cmd_str.replace(" -p- ", " -F ").replace("--trace-http-request-methods", "").replace("--trace-http-requests", "").replace("--trace-http-responses", "")
+                    req_json["command"] = cmd_str
                 print(f"[☁️ CLOUD EXEC] Forwarding command to Cloud Linux VM (10Gbps): {cmd_str[:80]}...")
                 req = urllib.request.Request(
                     exec_url,
                     data=json.dumps(req_json).encode("utf-8"),
-                    headers={"Content-Type": "application/json", "User-Agent": "MossadBrainGateway/3.2"},
+                    headers={"Content-Type": "application/json", "User-Agent": "MossadBrainGateway/3.3"},
                     method="POST",
                 )
                 timeout_s = int(req_json.get("timeout", 120)) + 15
@@ -291,7 +297,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                         reply_text = resp_obj["choices"][0].get("message", {}).get("content", "")
                         print(f"[✓] {target_name} responded ({len(reply_text)} chars)!")
                         log_chat_turn(last_user_text[-500:], reply_text, target_name)
-                        self._send_openai_response(resp_obj, is_stream)
+                        self._send_openai_response(resp_obj, is_stream, last_user_text)
                         return
             except Exception as e:
                 print(f"[!] Warning: {target_name} unreachable ({e}).")
@@ -318,7 +324,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                                     reply_text = resp_obj2["choices"][0].get("message", {}).get("content", "")
                                     print("[✓] Refreshed Kaggle GPU URL responded successfully!")
                                     log_chat_turn(last_user_text[-500:], reply_text, target_name)
-                                    self._send_openai_response(resp_obj2, is_stream)
+                                    self._send_openai_response(resp_obj2, is_stream, last_user_text)
                                     return
                         except Exception:
                             pass
@@ -331,7 +337,37 @@ class GatewayHandler(BaseHTTPRequestHandler):
         }
         self._send_json(503, err_msg)
 
-    def _send_openai_response(self, openai_resp: dict, is_stream: bool):
+    def _send_openai_response(self, openai_resp: dict, is_stream: bool, last_user_text: str = ""):
+        try:
+            import re
+            c = openai_resp["choices"][0]["message"].get("content", "")
+            if c:
+                # 1. If model used <function=execute_bash> with <command> or <parameter>command> or raw text
+                if "<function=" in c:
+                    c = re.sub(r"<command>(.*?)</command>", r"<parameter=command>\1</parameter>", c, flags=re.DOTALL)
+                    c = re.sub(r"<parameter>\s*command\s*>(.*?)</parameter>", r"<parameter=command>\1</parameter>", c, flags=re.DOTALL)
+                    c = re.sub(r"<parameter=cmd>(.*?)</parameter>", r"<parameter=command>\1</parameter>", c, flags=re.DOTALL)
+                    if "<function=execute_bash>" in c and "<parameter=command>" not in c:
+                        def _wrap_raw_bash(m):
+                            inner = re.sub(r"</?[^>]+>", "", m.group(1)).strip()
+                            return f"<function=execute_bash>\n<parameter=command>{inner}</parameter>\n</function>"
+                        c = re.sub(r"<function=execute_bash>(.*?)(?:</function>|$)", _wrap_raw_bash, c, flags=re.DOTALL)
+                # 2. If model wrote ```bash ... ``` blocks instead of <function=execute_bash> (and last message wasn't already a tool output)
+                elif "```" in c and "EXECUTION RESULT of [" not in last_user_text:
+                    bash_blocks = re.findall(r"```(?:bash|sh|shell|zsh)?\s*\n(.*?)```", c, flags=re.DOTALL)
+                    cmds = []
+                    for blk in bash_blocks:
+                        for line in blk.splitlines():
+                            line_s = line.strip()
+                            if line_s and not line_s.startswith("#"):
+                                cmds.append(line_s)
+                    if cmds:
+                        combined_cmd = " && ".join(cmds[:3])
+                        thought_text = re.sub(r"```(?:bash|sh|shell|zsh)?\s*\n.*?```", "", c, flags=re.DOTALL).strip()
+                        c = f"{thought_text}\n<function=execute_bash>\n<parameter=command>{combined_cmd}</parameter>\n</function>"
+                openai_resp["choices"][0]["message"]["content"] = c
+        except Exception as e:
+            print(f"[!] Normalization warning: {e}")
         if not is_stream:
             self._send_json(200, openai_resp)
             return
