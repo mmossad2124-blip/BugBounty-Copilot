@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Mossad-Pentast-AI Exclusive Brain Gateway & Failover Proxy
+Mossad-Pentast-AI Exclusive Brain Gateway & Cloud Linux Execution Proxy
 Listens on http://0.0.0.0:8080/v1 (accessible by Host, Docker OpenHands, and CLI)
 STRICT POLICY: ONLY routes to our own fine-tuned model (Mossad-pentast-ai).
 Never uses external/third-party models.
 
 Routing Hierarchy:
-  1. Primary (Fast GPU): Active Kaggle GPU Server running Mossad-pentast-ai
+  1. Primary (Fast GPU + 10Gbps Cloud Linux VM): Active Kaggle GPU Server running Mossad-pentast-ai
      (auto-discovered via data_pipeline/active_endpoint.json or gateway_config.json)
   2. Secondary Fallback (Slower CPU/Space): Same trained model (Mossad-pentast-ai)
      hosted on Hugging Face Space / Secondary CPU Node.
@@ -14,7 +14,9 @@ Routing Hierarchy:
 
 import json
 import os
+import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -23,6 +25,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 REPO_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gateway_config.json")
 ENDPOINT_FILE = os.path.join(REPO_DIR, "data_pipeline", "active_endpoint.json")
+HISTORY_DIR = os.path.join(REPO_DIR, "chat_history")
+os.makedirs(HISTORY_DIR, exist_ok=True)
+HISTORY_JSONL = os.path.join(HISTORY_DIR, "conversations.jsonl")
+HISTORY_MD = os.path.join(HISTORY_DIR, "latest_chat.md")
 
 
 def load_config():
@@ -63,10 +69,31 @@ def save_config(cfg):
         print(f"[!] Error saving config: {e}")
 
 
+def log_chat_turn(user_msg: str, assistant_msg: str, backend_name: str):
+    """Persist every conversation turn locally and in markdown for GitHub backup."""
+    try:
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
+        entry = {
+            "timestamp": ts,
+            "backend": backend_name,
+            "user": user_msg,
+            "assistant": assistant_msg,
+        }
+        with open(HISTORY_JSONL, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+        with open(HISTORY_MD, "a", encoding="utf-8") as mf:
+            mf.write(f"\n### 🕒 {ts} ({backend_name})\n")
+            mf.write(f"**👤 المستخدم:**\n```text\n{user_msg}\n```\n")
+            mf.write(f"**🤖 Mossad-pentast-ai:**\n```text\n{assistant_msg}\n```\n---\n")
+    except Exception as e:
+        print(f"[!] History log error: {e}")
+
+
 def refresh_kaggle_url_from_github(cfg):
     try:
         gh_raw = f"https://raw.githubusercontent.com/mmossad2124-blip/BugBounty-Copilot/main/data_pipeline/active_endpoint.json?t={int(time.time())}"
-        req_gh = urllib.request.Request(gh_raw, headers={"User-Agent": "BrainGateway/3.1", "Cache-Control": "no-cache"})
+        req_gh = urllib.request.Request(gh_raw, headers={"User-Agent": "BrainGateway/3.2", "Cache-Control": "no-cache"})
         with urllib.request.urlopen(req_gh, timeout=5) as g_resp:
             g_data = json.loads(g_resp.read().decode("utf-8"))
             if g_data.get("url") and "trycloudflare.com" in g_data["url"] and g_data.get("status") == "ONLINE":
@@ -102,6 +129,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                 "status": "online",
                 "model": "Mossad-pentast-ai (Exclusive Trained Weights)",
                 "active_brain": "Kaggle GPU (Primary)" if cfg.get("kaggle_url") else "HuggingFace Fallback (Secondary)",
+                "cloud_linux_vm": "ONLINE (10Gbps)" if cfg.get("kaggle_url") else "STANDBY",
                 "kaggle_url": cfg.get("kaggle_url"),
                 "fallback_url": cfg.get("fallback_url"),
             }
@@ -150,11 +178,49 @@ class GatewayHandler(BaseHTTPRequestHandler):
                 self._send_json(400, {"error": str(e)})
                 return
 
+        if path in ["/execute", "/v1/execute"]:
+            self._handle_cloud_execute(body, cfg)
+            return
+
         if path in ["/v1/chat/completions", "/chat/completions"]:
             self._handle_chat_completion(body, cfg)
             return
 
         self._send_json(404, {"error": f"Endpoint {path} not recognized by Gateway"})
+
+    def _handle_cloud_execute(self, body_bytes, cfg):
+        """Forward bash commands to the 10Gbps Cloud Linux VM on Kaggle."""
+        try:
+            req_json = json.loads(body_bytes.decode("utf-8"))
+        except Exception:
+            self._send_json(400, {"error": "Invalid JSON"})
+            return
+
+        if not cfg.get("kaggle_url"):
+            cfg = refresh_kaggle_url_from_github(cfg)
+
+        k_url = cfg.get("kaggle_url", "")
+        if k_url:
+            base_root = k_url[:-3] if k_url.endswith("/v1") else k_url.rstrip("/")
+            exec_url = f"{base_root}/execute"
+            try:
+                cmd_str = req_json.get("command", "")
+                print(f"[☁️ CLOUD EXEC] Forwarding command to Cloud Linux VM (10Gbps): {cmd_str[:80]}...")
+                req = urllib.request.Request(
+                    exec_url,
+                    data=json.dumps(req_json).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "User-Agent": "MossadBrainGateway/3.2"},
+                    method="POST",
+                )
+                timeout_s = int(req_json.get("timeout", 120)) + 15
+                with urllib.request.urlopen(req, timeout=timeout_s) as resp:
+                    resp_obj = json.loads(resp.read().decode("utf-8"))
+                    self._send_json(200, resp_obj)
+                    return
+            except Exception as e:
+                print(f"[!] Cloud Linux VM execute warning: {e}")
+
+        self._send_json(503, {"error": "Cloud Linux VM unreachable", "status": "offline"})
 
     def _handle_chat_completion(self, body_bytes, cfg):
         try:
@@ -163,6 +229,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
             req_json = {}
 
         is_stream = bool(req_json.get("stream", False))
+        last_user_text = ""
 
         # Flatten list-type content blocks if sent by OpenHands/LiteLLM
         if "messages" in req_json and isinstance(req_json["messages"], list):
@@ -178,7 +245,10 @@ class GatewayHandler(BaseHTTPRequestHandler):
                         elif isinstance(p, str):
                             parts.append(p)
                     content = "\n".join(parts)
-                clean_msgs.append({"role": role, "content": str(content)})
+                content_str = str(content)
+                if role == "user":
+                    last_user_text = content_str
+                clean_msgs.append({"role": role, "content": content_str})
             req_json["messages"] = clean_msgs
 
         # Always force stream=False to backend and convert to SSE if client requested stream=True
@@ -210,7 +280,7 @@ class GatewayHandler(BaseHTTPRequestHandler):
                     headers={
                         "Content-Type": "application/json",
                         "Authorization": f"Bearer {cfg.get('api_key', 'sk-mossad-pentast-2026')}",
-                        "User-Agent": "MossadBrainGateway/3.1",
+                        "User-Agent": "MossadBrainGateway/3.2",
                     },
                     method="POST",
                 )
@@ -218,13 +288,14 @@ class GatewayHandler(BaseHTTPRequestHandler):
                     resp_data = resp.read().decode("utf-8")
                     resp_obj = json.loads(resp_data)
                     if "choices" in resp_obj:
-                        print(f"[✓] {target_name} responded successfully!")
+                        reply_text = resp_obj["choices"][0].get("message", {}).get("content", "")
+                        print(f"[✓] {target_name} responded ({len(reply_text)} chars)!")
+                        log_chat_turn(last_user_text[-500:], reply_text, target_name)
                         self._send_openai_response(resp_obj, is_stream)
                         return
             except Exception as e:
                 print(f"[!] Warning: {target_name} unreachable ({e}).")
                 if "Primary Kaggle" in target_name:
-                    # Try refreshing from GitHub in case a new Kaggle tunnel was published
                     old_url = cfg.get("kaggle_url")
                     cfg = refresh_kaggle_url_from_github(cfg)
                     if cfg.get("kaggle_url") and cfg.get("kaggle_url") != old_url:
@@ -237,14 +308,16 @@ class GatewayHandler(BaseHTTPRequestHandler):
                                 headers={
                                     "Content-Type": "application/json",
                                     "Authorization": f"Bearer {cfg.get('api_key', 'sk-mossad-pentast-2026')}",
-                                    "User-Agent": "MossadBrainGateway/3.1",
+                                    "User-Agent": "MossadBrainGateway/3.2",
                                 },
                                 method="POST",
                             )
                             with urllib.request.urlopen(req2, timeout=cfg.get("timeout_seconds", 180)) as resp2:
                                 resp_obj2 = json.loads(resp2.read().decode("utf-8"))
                                 if "choices" in resp_obj2:
+                                    reply_text = resp_obj2["choices"][0].get("message", {}).get("content", "")
                                     print("[✓] Refreshed Kaggle GPU URL responded successfully!")
+                                    log_chat_turn(last_user_text[-500:], reply_text, target_name)
                                     self._send_openai_response(resp_obj2, is_stream)
                                     return
                         except Exception:
@@ -314,11 +387,24 @@ class GatewayHandler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
+def _background_endpoint_watcher():
+    while True:
+        try:
+            cfg = load_config()
+            refresh_kaggle_url_from_github(cfg)
+        except Exception:
+            pass
+        time.sleep(10)
+
+
 def run_server(port=8080):
+    watcher = threading.Thread(target=_background_endpoint_watcher, daemon=True)
+    watcher.start()
     server = ThreadingHTTPServer(("0.0.0.0", port), GatewayHandler)
     print(f"\n{'='*70}")
     print(f"🚀 [MOSSAD BRAIN GATEWAY - EXCLUSIVE] Listening on http://0.0.0.0:{port}/v1")
     print(f"🔗 1. Primary: Kaggle GPU (Mossad-pentast-ai) | 2. Fallback: Hugging Face (Mossad-pentast-ai)")
+    print(f"☁️  Cloud Linux Execution Proxy enabled at http://0.0.0.0:{port}/execute")
     print(f"{'='*70}\n")
     sys.stdout.flush()
     server.serve_forever()
