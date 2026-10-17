@@ -51,16 +51,40 @@ if ! docker exec openhands-app curl -s http://127.0.0.1:30001/alive > /dev/null 
     docker exec -d openhands-app bash -c "python3 -u -m openhands.runtime.action_execution_server 30001 --working-dir /opt/workspace_base --username root --user-id 0 > /tmp/action_server.log 2>&1"
 fi
 
-# 3. Check Kaggle GPU Brain Status
-echo "[*] Querying Cloud GPU Brain (Kaggle T4)..."
+# 3. Check & Auto-Launch Kaggle GPU Brain (Mossad-pentast-ai)
+echo "[*] Querying Cloud GPU Brain (Kaggle T4 - Mossad-pentast-ai)..."
 KAGGLE_STATUS=$("$PYTHON_BIN" -c "
-import os, subprocess
-os.environ['KAGGLE_CONFIG_DIR'] = '/tmp/k_mmossad2124-blip'
+import os, json, subprocess
+acc1 = json.load(open('$SCRIPT_DIR/accounts/account_1_mmossad2124.json'))
+tok = acc1['credentials']['kaggle_api_token']
+os.makedirs(os.path.expanduser('~/.kaggle'), exist_ok=True)
+with open(os.path.expanduser('~/.kaggle/access_token'), 'w') as f:
+    f.write(tok)
+os.chmod(os.path.expanduser('~/.kaggle/access_token'), 0o600)
 p = subprocess.run(['$SCRIPT_DIR/venv/bin/kaggle', 'kernels', 'status', 'mmossad2124/mossad-pentast-ai-server'], capture_output=True, text=True)
 print(p.stdout.strip())
 " 2>/dev/null)
 
 echo "    Kaggle Status: $KAGGLE_STATUS"
+if [[ "$KAGGLE_STATUS" != *"RUNNING"* ]]; then
+    echo "[*] Kaggle GPU Server is stopped. Launching Mossad-pentast-ai on Kaggle GPU now..."
+    "$PYTHON_BIN" -c "
+import os, json, ssl, urllib3.util.ssl_
+orig = urllib3.util.ssl_.create_urllib3_context
+def patched(*args, **kwargs):
+    ctx = orig(*args, **kwargs)
+    ctx.set_ciphers('DEFAULT@SECLEVEL=1')
+    return ctx
+urllib3.util.ssl_.create_urllib3_context = patched
+acc1 = json.load(open('$SCRIPT_DIR/accounts/account_1_mmossad2124.json'))
+os.environ['KAGGLE_API_TOKEN'] = acc1['credentials']['kaggle_api_token']
+from kaggle.api.kaggle_api_extended import KaggleApi
+api = KaggleApi()
+api.authenticate()
+api.kernels_push('$SCRIPT_DIR/notebooks_server')
+print('    [✓] Mossad-pentast-ai launched on Kaggle T4 GPU!')
+"
+fi
 
 # 4. Instructions & Ready State
 echo "======================================================================"
@@ -69,6 +93,6 @@ echo "======================================================================"
 echo "🌐 OpenHands Cockpit UI:                http://localhost:3000"
 echo "🔗 Brain Endpoint (Local Gateway):      http://127.0.0.1:8080/v1"
 echo "🔑 API Key:                             sk-mossad-pentast-2026"
-echo "🧠 Model Name:                          Mossad-pentast-ai"
+echo "🧠 Exclusive Model:                     Mossad-pentast-ai (1. Kaggle GPU -> 2. HuggingFace)"
 echo "🛑 To stop everything & free RAM:       ./stop_session.sh"
 echo "======================================================================"
