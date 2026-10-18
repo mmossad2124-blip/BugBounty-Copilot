@@ -1,6 +1,6 @@
 {
-  "url": "https://smart-border-agreement-petersburg.trycloudflare.com/v1",
-  "status": "ONLINE",
+  "url": "",
+  "status": "OFFLINE",
   "model": "Mossad-pentast-ai",
-  "timestamp": 1792319467.8501358
+  "message": "Kernel Stopped by User"
 }
