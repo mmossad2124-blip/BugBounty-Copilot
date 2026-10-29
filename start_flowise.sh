@@ -8,7 +8,7 @@ export NODE_PATH="/tools/node/lib/node_modules/flowise/node_modules:/tools/node/
 
 echo "[*] Installing any missing dependencies with npm..."
 cd /tools/node/lib/node_modules/flowise
-npm install --legacy-peer-deps multer-s3 winston-daily-rotate-file turndown langchainhub @aws-sdk/client-s3 2>&1 | tail -n 5 || true
+npm install --legacy-peer-deps @langchain/core @langchain/community langchain multer-s3 winston-daily-rotate-file turndown langchainhub @aws-sdk/client-s3 2>&1 | tail -n 5 || true
 
 echo "[*] Stopping any existing process on port 3000..."
 fuser -k 3000/tcp >/dev/null 2>&1 || true
