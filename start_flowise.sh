@@ -1,15 +1,19 @@
 #!/bin/bash
-set -e
 
-echo "[*] 1/4 Installing Flowise components dependencies..."
+echo "[*] Diagnostic: Checking current Flowise error in log..."
+grep -E "Cannot find module|MODULE_NOT_FOUND" -C 2 /content/flowise_native/logs/flowise.log || head -n 15 /content/flowise_native/logs/flowise.log || true
+
+echo "[*] Setting comprehensive NODE_PATH..."
+export NODE_PATH="/tools/node/lib/node_modules/flowise/node_modules:/tools/node/lib/node_modules:/tools/node/lib/node_modules/flowise/node_modules/flowise-components/node_modules"
+
+echo "[*] Installing any missing dependencies with npm..."
 cd /tools/node/lib/node_modules/flowise
-npm install --legacy-peer-deps multer-s3 winston-daily-rotate-file turndown langchainhub >/dev/null 2>&1 || npm install multer-s3 winston-daily-rotate-file turndown langchainhub >/dev/null 2>&1 || true
+npm install --legacy-peer-deps multer-s3 winston-daily-rotate-file turndown langchainhub @aws-sdk/client-s3 2>&1 | tail -n 5 || true
 
-echo "[*] 2/4 Stopping any stale processes on port 3000..."
+echo "[*] Stopping any existing process on port 3000..."
 fuser -k 3000/tcp >/dev/null 2>&1 || true
 sleep 1
 
-echo "[*] 3/4 Launching Flowise on native storage (/content/flowise_native)..."
 export FLOWISE_DATA_DIR="/content/flowise_native"
 export DATABASE_PATH="/content/flowise_native"
 export APIKEY_PATH="/content/flowise_native"
@@ -21,13 +25,15 @@ export ALLOW_BUILTIN_DEP="true"
 export TOOL_FUNCTION_EXTERNAL_DEP="node-fetch,axios"
 export PORT="3000"
 
+echo "[*] Starting Flowise..."
+> /content/flowise_native/logs/flowise.log
 nohup /tools/node/bin/flowise start > /content/flowise_native/logs/flowise.log 2>&1 &
 FLOWISE_PID=$!
 echo "[✓] Flowise spawned with PID: $FLOWISE_PID"
 
-echo "[*] 4/4 Waiting for Flowise Web UI to be ready on port 3000..."
+echo "[*] Waiting for Flowise..."
 READY=0
-for i in $(seq 1 45); do
+for i in $(seq 1 30); do
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/v1/ping || true)
     if [ "$STATUS" = "200" ]; then
         READY=1
@@ -37,9 +43,9 @@ for i in $(seq 1 45); do
 done
 
 if [ "$READY" = "1" ]; then
-    echo "[✓✓✓] FLOWISE IS FULLY ONLINE AND HEALTHY (HTTP 200)!"
+    echo "[✓✓✓] FLOWISE IS ONLINE AND RESPONDING 200 OK!"
     python3 - << 'PYEOF'
-import requests, json, time
+import requests, json
 
 session = requests.Session()
 f_headers = {"x-request-from": "internal", "Content-Type": "application/json"}
@@ -59,28 +65,26 @@ def try_login():
 
 r_log = try_login()
 if not r_log:
-    print("[*] Registering Flowise Root Administrator account...")
+    print("[*] Registering Administrator...")
     for rp in [
         {"user": {"name": ADMIN_NAME, "email": ADMIN_EMAIL, "credential": ADMIN_PASS}},
         {"user": {"name": ADMIN_NAME, "email": ADMIN_EMAIL, "password": ADMIN_PASS}},
-        {"user": {"name": ADMIN_NAME, "email": ADMIN_EMAIL, "credential": ADMIN_PASS, "confirmPassword": ADMIN_PASS}},
     ]:
         try:
             rr = session.post("http://127.0.0.1:3000/api/v1/account/register", json=rp, headers=f_headers, timeout=10)
             if rr.status_code in (200, 201):
                 print(f"[✓] Registration successful (HTTP {rr.status_code})")
                 break
-        except Exception as e:
+        except Exception:
             pass
     r_log = try_login()
 
 if r_log and r_log.status_code in (200, 201):
-    print("[✓✓✓] Flowise Root Admin Authenticated Successfully!")
+    print("[✓✓✓] Flowise Admin Authenticated Successfully!")
 else:
-    print("[!] Flowise setup status:", r_log.status_code if r_log else "Not registered")
+    print("[!] Login status:", r_log.status_code if r_log else "None")
 PYEOF
 else
-    echo "[!] Flowise failed to respond within 90s. Last log lines:"
-    tail -n 25 /content/flowise_native/logs/flowise.log
-    exit 1
+    echo "[!] Flowise failed to start. Current log:"
+    cat /content/flowise_native/logs/flowise.log | head -n 30
 fi
