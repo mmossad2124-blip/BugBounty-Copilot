@@ -6,15 +6,39 @@ grep -E "Cannot find module|MODULE_NOT_FOUND" -C 2 /content/flowise_native/logs/
 echo "[*] Setting comprehensive NODE_PATH..."
 export NODE_PATH="/tools/node/lib/node_modules/flowise/node_modules:/tools/node/lib/node_modules:/tools/node/lib/node_modules/flowise/node_modules/flowise-components/node_modules"
 
-echo "[*] Installing all storage provider dependencies..."
-cd /tools/node/lib/node_modules/flowise/node_modules/flowise-components
-npm install --legacy-peer-deps multer-cloud-storage multer-azure-blob-storage @azure/storage-blob @aws-sdk/client-s3 s3-streamlogger @google-cloud/storage @google-cloud/logging-winston winston-daily-rotate-file turndown @langchain/core 2>&1 | tail -n 8 || true
+echo "[*] Auto-resolving all storage dependencies via automated loader loop..."
+python3 - << 'PYEOF'
+import subprocess, re, sys
 
-cd /tools/node/lib/node_modules/flowise
-npm install --legacy-peer-deps multer-cloud-storage multer-azure-blob-storage @azure/storage-blob @aws-sdk/client-s3 s3-streamlogger @google-cloud/storage @google-cloud/logging-winston winston-daily-rotate-file turndown @langchain/core 2>&1 | tail -n 8 || true
+storage_index = "/tools/node/lib/node_modules/flowise/node_modules/flowise-components/dist/src/storage/index.js"
+node_dirs = [
+    "/tools/node/lib/node_modules/flowise/node_modules/flowise-components",
+    "/tools/node/lib/node_modules/flowise"
+]
+env = dict(PATH="/tools/node/bin:/usr/local/cuda/bin:/usr/local/bin:/usr/bin:/bin",
+           NODE_PATH="/tools/node/lib/node_modules/flowise/node_modules:/tools/node/lib/node_modules:/tools/node/lib/node_modules/flowise/node_modules/flowise-components/node_modules")
 
-echo "[*] Testing storage module loading in Node..."
-node -e "require('/tools/node/lib/node_modules/flowise/node_modules/flowise-components/dist/src/storage/index.js'); console.log('[✓] Storage index loaded successfully!')" || true
+# Pre-install known storage packages
+known = ["winston-azure-blob", "multer-azure-blob-storage", "multer-cloud-storage", "s3-streamlogger", "@azure/storage-blob", "@google-cloud/logging-winston", "@google-cloud/storage", "@aws-sdk/client-s3", "sanitize-filename", "winston-daily-rotate-file", "turndown", "@langchain/core"]
+print("[*] Installing batch of known storage packages...")
+for d in node_dirs:
+    subprocess.run(["npm", "install", "--legacy-peer-deps"] + known, cwd=d, env=env, capture_output=True)
+
+for attempt in range(15):
+    res = subprocess.run(["node", "-e", f"require('{storage_index}')"], env=env, capture_output=True, text=True)
+    if res.returncode == 0:
+        print(f"[✓✓✓] Storage index loaded successfully with 0 errors on attempt {attempt+1}!")
+        sys.exit(0)
+    m = re.search(r"Cannot find module '([^']+)'", res.stderr)
+    if m:
+        missing = m.group(1)
+        print(f"[*] Missing package detected: {missing}. Installing into node dirs...")
+        for d in node_dirs:
+            subprocess.run(["npm", "install", "--legacy-peer-deps", missing], cwd=d, env=env, capture_output=True)
+    else:
+        print("[!] Error loading storage index:", res.stderr[:300])
+        break
+PYEOF
 
 echo "[*] Stopping any existing process on port 3000..."
 fuser -k 3000/tcp >/dev/null 2>&1 || true
