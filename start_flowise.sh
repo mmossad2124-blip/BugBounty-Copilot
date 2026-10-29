@@ -6,13 +6,15 @@ grep -E "Cannot find module|MODULE_NOT_FOUND" -C 2 /content/flowise_native/logs/
 echo "[*] Setting comprehensive NODE_PATH..."
 export NODE_PATH="/tools/node/lib/node_modules/flowise/node_modules:/tools/node/lib/node_modules:/tools/node/lib/node_modules/flowise/node_modules/flowise-components/node_modules"
 
-echo "[*] Installing all missing production dependencies with npm..."
+echo "[*] Installing all storage provider dependencies..."
+cd /tools/node/lib/node_modules/flowise/node_modules/flowise-components
+npm install --legacy-peer-deps multer-cloud-storage multer-azure-blob-storage @azure/storage-blob @aws-sdk/client-s3 s3-streamlogger @google-cloud/storage @google-cloud/logging-winston winston-daily-rotate-file turndown @langchain/core 2>&1 | tail -n 8 || true
+
 cd /tools/node/lib/node_modules/flowise
-npm install --omit=dev --legacy-peer-deps 2>&1 | tail -n 8 || true
-if [ -d "/tools/node/lib/node_modules/flowise/node_modules/flowise-components" ]; then
-    cd /tools/node/lib/node_modules/flowise/node_modules/flowise-components
-    npm install --omit=dev --legacy-peer-deps 2>&1 | tail -n 8 || true
-fi
+npm install --legacy-peer-deps multer-cloud-storage multer-azure-blob-storage @azure/storage-blob @aws-sdk/client-s3 s3-streamlogger @google-cloud/storage @google-cloud/logging-winston winston-daily-rotate-file turndown @langchain/core 2>&1 | tail -n 8 || true
+
+echo "[*] Testing storage module loading in Node..."
+node -e "require('/tools/node/lib/node_modules/flowise/node_modules/flowise-components/dist/src/storage/index.js'); console.log('[✓] Storage index loaded successfully!')" || true
 
 echo "[*] Stopping any existing process on port 3000..."
 fuser -k 3000/tcp >/dev/null 2>&1 || true
